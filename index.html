@@ -59,6 +59,7 @@
     <section>
       <div class="sectionTitle">PLANIFICACIÓN</div>
       <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
+      <button class="action coordinateAction" id="addCoordinates"><span>⌖</span> Añadir punto por coordenadas</button>
       <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
       <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
       <button class="action saveAction" id="saveMission" disabled><span>▣</span> Guardar misión + PDF</button>
@@ -136,6 +137,40 @@
     </div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
+
+    <div id="coordinateModal" class="coordinateModal hide" role="dialog" aria-modal="true" aria-labelledby="coordinateModalTitle">
+      <div class="coordinateDialog">
+        <button id="coordinateModalClose" class="coordinateClose" title="Cerrar">×</button>
+        <div class="coordinateEyebrow">NUEVO PUNTO</div>
+        <h3 id="coordinateModalTitle">Añadir punto por coordenadas</h3>
+        <p class="coordinateHelp">Introduce grados decimales. Latitud: −90 a 90. Longitud: −180 a 180. Usa valores negativos para S y O/W.</p>
+        <div class="coordinateGrid">
+          <label>Latitud<input id="coordLatInput" inputmode="decimal" placeholder="18.44463" autocomplete="off"></label>
+          <label>Longitud<input id="coordLonInput" inputmode="decimal" placeholder="77.45088" autocomplete="off"></label>
+        </div>
+        <label class="coordinateField">Nombre del punto<input id="coordNameInput" placeholder="Objetivo científico" maxlength="80"></label>
+        <div class="coordinateGrid">
+          <label>Tipo
+            <select id="coordTypeInput">
+              <option value="science">Objetivo</option>
+              <option value="base">Base</option>
+            </select>
+          </label>
+          <label>Visita
+            <select id="coordRequiredInput">
+              <option value="required">Obligatorio</option>
+              <option value="optional">Opcional</option>
+            </select>
+          </label>
+        </div>
+        <label class="coordinateField">Tiempo en el objetivo (min)<input id="coordDwellInput" type="number" min="0" max="1440" step="1" value="15"></label>
+        <div id="coordinateError" class="coordinateError hide"></div>
+        <div class="coordinateActions">
+          <button id="coordinateCancel" class="referenceSecondary">Cancelar</button>
+          <button id="coordinateAdd" class="referencePrimary">Añadir punto</button>
+        </div>
+      </div>
+    </div>
     <div id="mapInfo" class="mapInfo hide" role="dialog" aria-label="Información de ubicación">
       <button id="mapInfoClose" class="mapInfoClose" title="Cerrar">×</button>
       <div id="mapInfoKind" class="mapInfoKind">UBICACIÓN</div>
