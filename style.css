@@ -60,3 +60,48 @@ body{font-size:14px;background:linear-gradient(135deg,#080706,#100b08 60%,#09080
 .layerStatus.live{background:#0f3b31;color:#adf0d9;border-color:#4ba48c}
 .layerStatus.error{background:#4a1f18;color:#ffd2c7;border-color:#b65b45}
 .layer-dust,.layer-dust-fallback,.layer-roughness{image-rendering:auto}
+
+/* V17 — secuencia de visita rediseñada: timeline limpia, sin doble scroll ni desbordes */
+.waypointPanel{margin-top:18px;padding:16px 0 0;border-top:1px solid #3a2a21}
+.waypointPanel .sectionTitle{margin:0 2px 12px;font-size:11px;color:#f0b08e;letter-spacing:1.7px}
+.waypointList{display:flex;flex-direction:column;gap:8px;max-height:none;overflow:visible;padding:0 2px 0 0}
+.waypoint{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr) 108px;column-gap:10px;align-items:center;min-height:68px;padding:10px 10px 10px 8px;background:linear-gradient(145deg,#17120f,#0e0b09);border:1px solid #49342a;border-radius:11px;box-shadow:0 6px 16px rgba(0,0,0,.15)}
+.waypoint::before{content:"";position:absolute;left:28px;top:-9px;bottom:-9px;width:2px;background:#3f2d24;z-index:0}
+.waypoint:first-child::before{top:50%}
+.waypoint:last-child::before{bottom:50%}
+.wpIndex{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#251812;border:2px solid #a85a3e;color:#ffd2b5;font-size:10px;font-weight:900;box-shadow:0 0 0 4px #0f0b09}
+.waypoint:first-child .wpIndex{background:#49301b;border-color:#e1a353;color:#ffe2b5}
+.wpMain{position:relative;z-index:1;min-width:0}
+.wpName{display:block;width:100%;min-width:0;background:transparent;border:0;border-bottom:1px solid #463128;color:#fff7ef;font-size:12px;font-weight:750;line-height:1.25;padding:4px 0 6px;outline:none;text-overflow:ellipsis;overflow:hidden}
+.wpName:focus{border-bottom-color:#ef7a52}
+.wpMeta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:6px;min-width:0}
+.wpMeta span{font-size:8px;line-height:1.2;color:#86766b;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{flex:0 0 auto;border:1px solid #53443b;background:#1b1714;color:#d4c6bc;border-radius:999px;font-size:7px;padding:5px 8px;cursor:pointer;white-space:nowrap;font-weight:850;letter-spacing:.4px}
+.tag.required{color:#ffd58e;border-color:#8a6530;background:#302314}
+.tag.optional{color:#91dfc6;border-color:#376f5d;background:#10251f}
+.wpActions{position:relative;z-index:1;display:flex;justify-content:flex-end;gap:5px;align-items:center}
+.wpActions button{width:32px;height:32px;padding:0;border:1px solid #4a3930;background:#171311;color:#b9ada4;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:inset 0 1px 0 #ffffff08}
+.wpActions button:hover:not(:disabled){border-color:#d36b49;background:#251712;color:#fff}
+.wpActions button:disabled{opacity:.18;cursor:not-allowed}
+.returnCheck{margin:12px 2px 0;padding:11px 12px;border:1px solid #3f3028;border-radius:9px;background:#0f0c0a;color:#d4c4b8;font-size:10px;font-weight:650}
+.returnCheck input{width:17px;height:17px}
+.waypointPanel .sideNote{margin:10px 2px 0}
+
+/* evita barras internas innecesarias; el scroll queda en el panel lateral general */
+.sidebar{overflow-y:auto;overflow-x:hidden}
+.waypointList,.waypoint,.wpMain,.wpMeta{max-width:100%;overflow-x:hidden}
+
+@media(max-width:1200px){
+  .waypoint{grid-template-columns:38px minmax(0,1fr) 100px;column-gap:8px;padding-right:8px}
+  .wpIndex{width:34px;height:34px;font-size:9px}
+  .waypoint::before{left:26px}
+}
+@media(max-width:760px){
+  .waypoint{grid-template-columns:34px minmax(0,1fr) 94px;min-height:64px;column-gap:7px;padding:9px 7px}
+  .wpIndex{width:32px;height:32px}
+  .wpActions{gap:4px}
+  .wpActions button{width:29px;height:29px;font-size:12px}
+  .wpName{font-size:11px}
+  .wpMeta span{font-size:7px}
+  .tag{font-size:6.5px;padding:4px 7px}
+}

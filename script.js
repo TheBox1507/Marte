@@ -497,6 +497,51 @@ function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2
 
 function getHistory(){ try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}catch{return[];} }
 function setHistory(items){localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,12)));}
+
+function pdfStrategyPayload(m){
+  if(!m) return null;
+  return {
+    mode:m.mode,
+    duration:m.duration,
+    score:m.score,
+    overBudget:m.overBudget,
+    availableHours:m.availableHours,
+    dwellMinutes:m.dwellMinutes,
+    metrics:m.metrics,
+    includedPoints:(m.includedPoints||m.sequence||[]).map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
+    omittedOptional:(m.omittedOptional||[]).map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
+    legs:(m.legs||[]).map(leg=>({
+      from:{lat:leg.from?.lat,lon:leg.from?.lon,name:leg.from?.name,type:leg.from?.type,required:leg.from?.required,dwellMin:Number(leg.from?.dwellMin)||0},
+      to:{lat:leg.to?.lat,lon:leg.to?.lon,name:leg.to?.name,type:leg.to?.type,required:leg.to?.required,dwellMin:Number(leg.to?.dwellMin)||0},
+      durationHours:leg.durationHours,
+      metrics:leg.metrics
+    }))
+  };
+}
+
+async function exportMissionPdf(mode){
+  const selected=currentMission?.[mode];
+  if(!selected) return false;
+  const report={
+    fileName:`mars-explorer-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}`,
+    generatedAt:new Date().toISOString(),
+    selectedMode:mode,
+    returnBase:$('returnBase').checked,
+    params:normalizeParams(),
+    points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
+    selected:pdfStrategyPayload(selected),
+    strategies:['distance','balanced','risk'].map(k=>pdfStrategyPayload(currentMission[k])).filter(Boolean)
+  };
+  const res=await fetch('/api/mission-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)});
+  if(!res.ok) throw new Error(`No se pudo generar el PDF (${res.status}).`);
+  const blob=await res.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=report.fileName+'.pdf'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  return true;
+}
+
 function saveHistoryEntry(mode){
   const items=getHistory(),now=new Date(),selected=currentMission?.[mode];
   const fingerprint=JSON.stringify({mode,returnBase:$('returnBase').checked,speed:Number($('speed').value),eva:Number($('evaTime').value),margin:Number($('returnMargin').value),points:missionPoints.map(p=>[p.lat,p.lon,p.name,p.required,p.dwellMin])});
@@ -523,7 +568,20 @@ $('planMode').onclick=newMission;
 $('calculate').onclick=()=>calculateMission();
 $('clearRoute').onclick=clearMission;
 $('recalculate').onclick=()=>calculateMission({saveHistory:true});
-$('saveMission').onclick=()=>{if(currentMission){saveHistoryEntry(document.querySelector('input[name="mode"]:checked').value);showToast('Misión guardada en el historial.');}};
+$('saveMission').onclick=async()=>{
+  if(!currentMission||busy)return;
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  try{
+    saveHistoryEntry(mode);
+    setBusy(true,'Guardando misión y generando informe PDF…');
+    await exportMissionPdf(mode);
+    setBusy(false,'MISIÓN GUARDADA · INFORME PDF DESCARGADO · NASA / USGS');
+    showToast('Misión guardada en el historial y PDF generado.');
+  }catch(err){
+    setBusy(false,'DATOS CARTOGRÁFICOS · NASA / USGS');
+    showToast(err.message||'No se pudo generar el PDF.');
+  }
+};
 $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked;

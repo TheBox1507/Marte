@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { URL } from 'node:url';
+import { buildMissionPdf } from './pdf-report.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8000);
@@ -41,6 +42,27 @@ async function serveStatic(req, res, url) {
   }
 }
 
+async function readJson(req, maxBytes = 2_000_000) {
+  return await new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error('Solicitud demasiado grande.'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); }
+      catch { reject(new Error('JSON de mision invalido.')); }
+    });
+    req.on('error', reject);
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -50,6 +72,18 @@ const server = http.createServer(async (req, res) => {
         elevation: 'ArcGIS ElevationLayer · MDEM200M',
         note: 'La elevación se consulta en el navegador mediante queryElevation.'
       });
+    }
+    if (url.pathname === '/api/mission-pdf' && req.method === 'POST') {
+      const report = await readJson(req);
+      const pdf = buildMissionPdf(report);
+      cors(res);
+      res.writeHead(200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${String(report.fileName || 'mars-explorer-mision').replace(/[^a-zA-Z0-9._-]/g,'_')}.pdf"`,
+        'Cache-Control': 'no-store',
+        'Content-Length': pdf.length
+      });
+      return res.end(pdf);
     }
     return serveStatic(req, res, url);
   } catch (err) {
