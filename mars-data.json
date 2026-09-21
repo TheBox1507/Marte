@@ -47,19 +47,9 @@
       "use": "Base cartográfica global combinada MOLA/HRSC a 200 m/píxel."
     },
     {
-      "name": "THEMIS Day IR / USGS Astrogeology",
-      "url": "https://astrogeology.usgs.gov/search/map/mars_odyssey_themis_ir_day_global_mosaic_100m_v12",
-      "use": "Mosaico infrarrojo diurno a ~100 m/píxel para ±60° de latitud."
-    },
-    {
-      "name": "THEMIS Night IR / USGS Astrogeology",
-      "url": "https://astrogeology.usgs.gov/search/map/mars_odyssey_themis_ir_night_60n60s_mosaic_100m_v14",
-      "use": "Mosaico infrarrojo nocturno a ~100 m/píxel para ±60° de latitud."
-    },
-    {
-      "name": "USGS Astrogeology WMS",
-      "url": "https://astrowebmaps.wr.usgs.gov/",
-      "use": "Servicios WMS de cartografía y nomenclatura de Marte."
+      "name": "Esri / NASA MDEM200M",
+      "url": "https://astro.arcgis.com/arcgis/rest/services/OnMars/MDEM200M/ImageServer",
+      "use": "Servicio global de elevación utilizado internamente para pendiente, desnivel y rugosidad."
     }
   ],
   "map": {

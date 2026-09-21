@@ -5,7 +5,7 @@ const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
 const HISTORY_KEY = 'mars-explorer-mission-history-v2';
 
 let D;
-let map, markerLayer, routeLayer, molaLayer, themisDayLayer, themisNightLayer, nomenclatureLayer, slopeLayer, roughnessLayer;
+let map, markerLayer, routeLayer, molaLayer, slopeLayer, roughnessLayer;
 let missionPoints = [];
 let selecting = false;
 let currentMission = null;
@@ -28,47 +28,27 @@ function buildLayers(){
     source:new ol.source.XYZ({projection,tileGrid,maxZoom,wrapX:true,crossOrigin:'anonymous',url,transition:0}),
     opacity:1,zIndex:1
   });
-  const usgsWms = (layerName, opacity=0.78) => {
-    const layer = new ol.layer.Image({
-      source:new ol.source.ImageWMS({
-        url:'https://planetarymaps.usgs.gov/cgi-bin/mapserv?map=/maps/mars/mars_simp_cyl.map',
-        params:{SERVICE:'WMS',VERSION:'1.1.1',REQUEST:'GetMap',LAYERS:layerName,STYLES:'',FORMAT:'image/png',TRANSPARENT:true,SRS:'EPSG:4326'},
-        projection:'EPSG:4326',ratio:1,crossOrigin:'anonymous',serverType:'mapserver'
-      }),
-      opacity,visible:false,zIndex:3
-    });
-    layer.set('wmsLayerName',layerName);
-    return layer;
-  };
 
+  // Base cartográfica global. El DEM numérico se consulta por backend solo
+  // cuando el motor necesita elevación/pendiente/rugosidad.
   molaLayer = xyz(D.map.globalTile, 12);
   molaLayer.set('layerId','mola-global');
   molaLayer.setOpacity(1);
-
-  themisDayLayer = usgsWms('THEMIS', .62);
-  themisNightLayer = usgsWms('THEMIS_night', .58);
-  nomenclatureLayer = usgsWms('NOMENCLATURE', .92);
-
-  [
-    ['themisDay',themisDayLayer],
-    ['themisNight',themisNightLayer],
-    ['nomenclature',nomenclatureLayer]
-  ].forEach(([name,layer])=>{
-    const src=layer.getSource();
-    src.on('imageloadstart',()=>markLayerLoading(name));
-    src.on('imageloadend',()=>markLayerLoaded(name));
-    src.on('imageloaderror',()=>markLayerError(name));
-  });
 
   slopeLayer = new ol.layer.Vector({source:new ol.source.Vector(),zIndex:4,visible:false});
   roughnessLayer = new ol.layer.Vector({source:new ol.source.Vector(),zIndex:5,visible:false});
   slopeLayer.set('layerId','slope-derived-mola');
   roughnessLayer.set('layerId','roughness-derived-mola');
 
-  markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
+  markerLayer = new ol.layer.Vector({
+    source:new ol.source.Vector(),
+    style: feature => pointStyle(feature.get('kind'), feature.get('label')),
+    zIndex:10
+  });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
-  return { projection, layers:[molaLayer,themisDayLayer,themisNightLayer,nomenclatureLayer,slopeLayer,roughnessLayer,routeLayer,markerLayer] };
+
+  return { projection, layers:[molaLayer,slopeLayer,roughnessLayer,routeLayer,markerLayer] };
 }
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
@@ -77,8 +57,10 @@ function markLayerLoading(name){ setLayerStatus(name,'CARGANDO…','loading'); }
 
 async function prepareLayerSources(){
   setLayerStatus('mola','ACTIVA','live');
-  ['themisDay','themisNight','nomenclature'].forEach(n=>setLayerStatus(n,'DISPONIBLE','ready'));
-  ['slope','roughness'].forEach(n=>setLayerStatus(n,'LISTA','ready'));
+  setLayerStatus('slope','ACERCA PARA ANALIZAR','ready');
+  setLayerStatus('roughness','ACERCA PARA ANALIZAR','ready');
+  setLayerStatus('route','ACTIVA','live');
+  setLayerStatus('points','ACTIVA','live');
 }
 
 function initMap(){
@@ -149,6 +131,16 @@ function makeGridSamples(ext,cols=15,rows=15){
 }
 async function refreshDerivedLayers(force=true){
   if(!map || (!slopeLayer.getVisible() && !roughnessLayer.getVisible())) return;
+  const zoom=map.getView().getZoom();
+  // A escala planetaria no tiene sentido dibujar una malla analítica densa.
+  // Esperamos a un zoom regional para solicitar el DEM y evitamos falsas alarmas.
+  if(zoom < 2.2){
+    ['slope','roughness'].forEach(n=>{
+      const layer=n==='slope'?slopeLayer:roughnessLayer;
+      if(layer.getVisible()) setLayerStatus(n,'ACERCA PARA ANALIZAR','ready');
+    });
+    return;
+  }
   const ext=map.getView().calculateExtent(map.getSize());
   const [minX,minY,maxX,maxY]=ext;
   const clipped=[clamp(minX,-179.8),clamp(minY,-89.8),clamp(maxX,179.8),clamp(maxY,89.8)];
@@ -156,45 +148,51 @@ async function refreshDerivedLayers(force=true){
   if(!force && keyExt===lastDerivedExtentKey) return;
   lastDerivedExtentKey=keyExt;
   const token=++derivedRefreshToken;
-  ['slope','roughness'].forEach(n=>{if((n==='slope'?slopeLayer:roughnessLayer).getVisible())markLayerLoading(n);});
+  if(slopeLayer.getVisible()) markLayerLoading('slope');
+  if(roughnessLayer.getVisible()) markLayerLoading('roughness');
   try{
-    const samples=makeGridSamples(clipped,15,15);
+    const samples=makeGridSamples(clipped,9,9);
     const resp=await fetch('/api/elevations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({points:samples.points})});
-    if(!resp.ok) throw new Error(`DEM ${resp.status}`);
-    const body=await resp.json();
+    let body=null; try{body=await resp.json();}catch{}
+    if(!resp.ok) throw new Error(body?.error || `DEM ${resp.status}`);
     if(token!==derivedRefreshToken) return;
-    const grid=body.points||[]; const get=(r,c)=>grid[r*samples.cols+c];
+    const grid=body.points||[];
+    const get=(r,c)=>grid[r*samples.cols+c];
     const slopeFeatures=[], roughFeatures=[];
     for(let r=0;r<samples.rows-1;r++) for(let c=0;c<samples.cols-1;c++){
       const p00=get(r,c),p10=get(r,c+1),p01=get(r+1,c),p11=get(r+1,c+1);
-      const e=[p00?.elevationM,p10?.elevationM,p01?.elevationM,p11?.elevationM].map(Number).filter(Number.isFinite);
-      if(e.length<2) continue;
-      const dxKm=Math.max(.001,haversine(p00,p10)); const dyKm=Math.max(.001,haversine(p00,p01));
+      const vals=[p00?.elevationM,p10?.elevationM,p01?.elevationM,p11?.elevationM].map(Number).filter(Number.isFinite);
+      if(vals.length<3) continue;
+      const dxKm=Math.max(.001,haversine(p00,p10));
+      const dyKm=Math.max(.001,haversine(p00,p01));
       const sx=Math.atan2(Math.abs((Number(p10.elevationM)-Number(p00.elevationM))/1000),dxKm)*180/Math.PI;
       const sy=Math.atan2(Math.abs((Number(p01.elevationM)-Number(p00.elevationM))/1000),dyKm)*180/Math.PI;
       const slope=Math.max(sx,sy);
-      const mean=e.reduce((a,b)=>a+b,0)/e.length;
-      const rough=Math.sqrt(e.reduce((a,b)=>a+(b-mean)**2,0)/e.length);
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const rough=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length);
       const x0=p00.lon,y0=p00.lat,x1=p11.lon,y1=p11.lat;
       const polygon=new ol.geom.Polygon([[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]);
       if(slopeLayer.getVisible()) slopeFeatures.push(new ol.Feature({geometry:polygon,slope}));
       if(roughnessLayer.getVisible()) roughFeatures.push(new ol.Feature({geometry:polygon,roughness:rough}));
     }
-    slopeLayer.getSource().clear(); roughnessLayer.getSource().clear();
-    slopeFeatures.forEach(f=>f.setStyle(new ol.style.Style({fill:new ol.style.Fill({color:rgbaForSlope(f.get('slope'))}),stroke:new ol.style.Stroke({color:'rgba(255,255,255,.06)',width:1})}))); slopeLayer.getSource().addFeatures(slopeFeatures);
-    roughFeatures.forEach(f=>f.setStyle(new ol.style.Style({fill:new ol.style.Fill({color:rgbaForRough(f.get('roughness'))}),stroke:new ol.style.Stroke({color:'rgba(255,255,255,.06)',width:1})}))); roughnessLayer.getSource().addFeatures(roughFeatures);
-    if(slopeLayer.getVisible()) markLayerLoaded('slope'); else setLayerStatus('slope','LISTA','ready');
-    if(roughnessLayer.getVisible()) markLayerLoaded('roughness'); else setLayerStatus('roughness','LISTA','ready');
+    slopeLayer.getSource().clear();
+    roughnessLayer.getSource().clear();
+    slopeFeatures.forEach(f=>f.setStyle(new ol.style.Style({fill:new ol.style.Fill({color:rgbaForSlope(f.get('slope'))}),stroke:new ol.style.Stroke({color:'rgba(255,255,255,.08)',width:1})})));
+    roughFeatures.forEach(f=>f.setStyle(new ol.style.Style({fill:new ol.style.Fill({color:rgbaForRough(f.get('roughness'))}),stroke:new ol.style.Stroke({color:'rgba(255,255,255,.08)',width:1})})));
+    slopeLayer.getSource().addFeatures(slopeFeatures);
+    roughnessLayer.getSource().addFeatures(roughFeatures);
+    if(slopeLayer.getVisible()) setLayerStatus('slope',slopeFeatures.length?'ACTIVA':'SIN COBERTURA','live');
+    if(roughnessLayer.getVisible()) setLayerStatus('roughness',roughFeatures.length?'ACTIVA':'SIN COBERTURA','live');
   }catch(err){
     if(token!==derivedRefreshToken) return;
-    if(slopeLayer.getVisible()) markLayerError('slope');
-    if(roughnessLayer.getVisible()) markLayerError('roughness');
+    if(slopeLayer.getVisible()) setLayerStatus('slope','NO DISPONIBLE EN ESTA VISTA','ready');
+    if(roughnessLayer.getVisible()) setLayerStatus('roughness','NO DISPONIBLE EN ESTA VISTA','ready');
     console.error('Derived layer error',err);
   }
 }
 
 function haversine(a,b){
-  const p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(b.lat-a.lat)*Math.PI/180,dl=(b.lon-a.lon)*Math.PI/180;
+  const p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(b.lat-a.lat)*Math.PI/180,dl=shortestLonDelta(a.lon,b.lon)*Math.PI/180;
   const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   return 2*MARTIAN_RADIUS*Math.asin(Math.sqrt(h));
 }
@@ -286,6 +284,8 @@ async function getElevations(points){
   let json=null; try{json=await response.json();}catch{}
   if(!response.ok) throw new Error(json?.error || `Servicio de elevación: ${response.status}`);
   if(!Array.isArray(json?.points)) throw new Error('El servicio de elevación no devolvió puntos.');
+  const missing=json.points.filter(p=>!Number.isFinite(Number(p.elevationM))).length;
+  if(missing===json.points.length) throw new Error('El DEM global no devolvió ninguna elevación válida para la misión.');
   return json.points;
 }
 
@@ -526,16 +526,36 @@ $('recalculate').onclick=()=>calculateMission({saveHistory:true});
 $('saveMission').onclick=()=>{if(currentMission){saveHistoryEntry(document.querySelector('input[name="mode"]:checked').value);showToast('Misión guardada en el historial.');}};
 $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
-  const layer=el.dataset.layer, visible=el.checked; activeLayerNames[visible?'add':'delete'](layer);
-  const toggle=(obj,name)=>{ if(!obj)return; obj.setVisible(visible); if(visible) { markLayerLoading(name); if(name==='slope'||name==='roughness') refreshDerivedLayers(true); } else setLayerStatus(name,'LISTA','ready'); };
-  if(layer==='mola') { molaLayer.setVisible(visible); setLayerStatus('mola',visible?'ACTIVA':'OCULTA',visible?'live':'ready'); }
-  if(layer==='themisDay') toggle(themisDayLayer,'themisDay');
-  if(layer==='themisNight') toggle(themisNightLayer,'themisNight');
-  if(layer==='nomenclature') toggle(nomenclatureLayer,'nomenclature');
-  if(layer==='slope') toggle(slopeLayer,'slope');
-  if(layer==='roughness') toggle(roughnessLayer,'roughness');
-  if(layer==='route') { routeLayer.setVisible(visible); setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready'); }
-  if(layer==='points') { markerLayer.setVisible(visible); setLayerStatus('points',visible?'ACTIVA':'OCULTA',visible?'live':'ready'); }
+  const layer=el.dataset.layer, visible=el.checked;
+  activeLayerNames[visible?'add':'delete'](layer);
+  if(layer==='mola'){
+    molaLayer.setVisible(visible);
+    setLayerStatus('mola',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  }
+  if(layer==='slope'){
+    slopeLayer.setVisible(visible);
+    slopeLayer.getSource().clear();
+    if(visible){
+      setLayerStatus('slope',map.getView().getZoom()>=2.2?'CARGANDO…':'ACERCA PARA ANALIZAR',map.getView().getZoom()>=2.2?'loading':'ready');
+      refreshDerivedLayers(true);
+    } else setLayerStatus('slope','OCULTA','ready');
+  }
+  if(layer==='roughness'){
+    roughnessLayer.setVisible(visible);
+    roughnessLayer.getSource().clear();
+    if(visible){
+      setLayerStatus('roughness',map.getView().getZoom()>=2.2?'CARGANDO…':'ACERCA PARA ANALIZAR',map.getView().getZoom()>=2.2?'loading':'ready');
+      refreshDerivedLayers(true);
+    } else setLayerStatus('roughness','OCULTA','ready');
+  }
+  if(layer==='route'){
+    routeLayer.setVisible(visible);
+    setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  }
+  if(layer==='points'){
+    markerLayer.setVisible(visible);
+    setLayerStatus('points',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  }
 });
 document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{if(currentMission){const mode=el.value;renderMission(currentMission[mode]);drawMissionRoutes(currentMission,mode);}});
 $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};

@@ -37,7 +37,7 @@ function parseSampleValue(sample) {
   return Number.isFinite(v) ? v : null;
 }
 
-async function requestMdemSamples(points) {
+async function requestMdemSamples(points){
   const geometry = {
     points: points.map(p => [Number(p.lon), Number(p.lat)]),
     spatialReference: { wkid: 4326 }
@@ -49,9 +49,10 @@ async function requestMdemSamples(points) {
     returnFirstValueOnly: 'true',
     f: 'json'
   });
-  const response = await fetch(`${MARS_ELEVATION_SERVICE}?${params}`, {
-    headers: { 'Accept': 'application/json' },
-    signal: AbortSignal.timeout(30000)
+  const url = `${MARS_ELEVATION_SERVICE}?${params}`;
+  const response = await fetch(url, {
+    headers: { 'Accept': 'application/json', 'User-Agent': 'Mars-Explorer/1.5' },
+    signal: AbortSignal.timeout(25000)
   });
   if (!response.ok) throw new Error(`MDEM200M HTTP ${response.status}`);
   const json = await response.json();
@@ -78,17 +79,49 @@ async function sampleElevations(points) {
     else missing.push(p);
   }
 
-  for (let offset = 0; offset < missing.length; offset += 250) {
-    const chunk = missing.slice(offset, offset + 250);
-    const samples = await requestMdemSamples(chunk);
-    for (let j = 0; j < chunk.length; j++) {
-      const byId = samples.find(s => Number(s?.locationId) === j + 1);
-      const sample = byId || (samples.length === chunk.length ? samples[j] : null);
-      const elev = parseSampleValue(sample);
-      const k = cacheKey(chunk[j]);
-      sampleCache.set(k, elev);
-      values.set(k, elev);
+  // El endpoint de ArcGIS recibe la geometría como query string. Mantener los
+  // lotes pequeños evita 414 URI Too Long y hace que las rutas globales sigan
+  // siendo viables. Se procesan con concurrencia limitada para no saturar el servicio.
+  const chunkSize = 12;
+  const chunks = [];
+  for (let offset = 0; offset < missing.length; offset += chunkSize) {
+    chunks.push(missing.slice(offset, offset + chunkSize));
+  }
+
+  async function processChunk(chunk) {
+    try {
+      return await requestMdemSamples(chunk);
+    } catch (err) {
+      // Si aun así el proveedor devuelve 414, divide otra vez automáticamente.
+      if (String(err?.message || '').includes('414') && chunk.length > 1) {
+        const mid = Math.ceil(chunk.length / 2);
+        const a = await processChunk(chunk.slice(0, mid));
+        const b = await processChunk(chunk.slice(mid));
+        return [...a, ...b];
+      }
+      throw err;
     }
+  }
+
+  for (let offset = 0; offset < chunks.length; offset += 4) {
+    const group = chunks.slice(offset, offset + 4);
+    const results = await Promise.all(group.map(processChunk));
+    group.forEach((chunk, gi) => {
+      const samples = results[gi] || [];
+      const byId = new Map();
+      samples.forEach((sample, idx) => {
+        const id = Number(sample?.locationId);
+        if (Number.isFinite(id)) byId.set(id, sample);
+        else if (!byId.has(idx + 1)) byId.set(idx + 1, sample);
+      });
+      chunk.forEach((point, j) => {
+        const sample = byId.get(j + 1) || byId.get(j) || (samples.length === chunk.length ? samples[j] : null);
+        const elev = parseSampleValue(sample);
+        const k = cacheKey(point);
+        sampleCache.set(k, elev);
+        values.set(k, elev);
+      });
+    });
   }
 
   return points.map(p => ({ ...p, elevationM: values.get(cacheKey(p)) ?? null }));
@@ -118,82 +151,6 @@ async function handleElevations(req, res) {
   }
 }
 
-const WMTS_LAYERS = {
-  thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/WMTSCapabilities.xml'
-};
-const wmtsCache = new Map();
-
-function decodeXmlEntities(value='') {
-  return value.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&#39;', "'");
-}
-
-async function resolveWmtsTemplate(layerId) {
-  if (wmtsCache.has(layerId)) return wmtsCache.get(layerId);
-  const capabilitiesUrl = WMTS_LAYERS[layerId];
-  if (!capabilitiesUrl) return null;
-  try {
-    const response = await fetch(capabilitiesUrl, { headers: { 'Accept': 'application/xml,text/xml,*/*' } });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const xml = await response.text();
-    const resourceMatch = xml.match(/<ResourceURL\b[^>]*?template=["']([^"']+)["'][^>]*>/i);
-    if (resourceMatch?.[1]) {
-      const template = decodeXmlEntities(resourceMatch[1])
-        .replace(/\{TileMatrix\}/g, '{z}')
-        .replace(/\{TileRow\}/g, '{y}')
-        .replace(/\{TileCol\}/g, '{x}');
-      const info = { template, source: 'NASA Mars Trek WMTS GetCapabilities' };
-      wmtsCache.set(layerId, info);
-      return info;
-    }
-  } catch (_) {}
-  const fallbackTemplates = { thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/default/default028mm/{z}/{y}/{x}.png' };
-  const info = fallbackTemplates[layerId] ? { template: fallbackTemplates[layerId], source: 'NASA Mars Trek REST template (fallback)' } : null;
-  if (info) wmtsCache.set(layerId, info);
-  return info;
-}
-
-
-const TILE_UPSTREAMS = {
-  thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/default/default028mm/{z}/{y}/{x}.png'
-};
-async function handleTileProxy(req, res, url) {
-  if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
-  const layer = url.searchParams.get('layer') || '';
-  const z = Number(url.searchParams.get('z'));
-  const x = Number(url.searchParams.get('x'));
-  const y = Number(url.searchParams.get('y'));
-  if (!TILE_UPSTREAMS[layer] || !Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y) || z < 0 || z > 11 || x < 0 || y < 100000) {
-    return send(res, 400, { error: 'Parámetros de tile inválidos.' });
-  }
-  const templateInfo = await resolveWmtsTemplate(layer);
-  const template = templateInfo?.template || TILE_UPSTREAMS[layer];
-  const upstream = template.replaceAll('{z}',String(z)).replaceAll('{x}',String(x)).replaceAll('{y}',String(y));
-  try {
-    const r = await fetch(upstream, { headers: { 'User-Agent': 'Mars-Explorer/1.0' } });
-    if (!r.ok) {
-      res.writeHead(r.status, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
-      return res.end('Tile sin datos en este nivel/área.');
-    }
-    const buf = Buffer.from(await r.arrayBuffer());
-    res.writeHead(200, {
-      'Content-Type': r.headers.get('content-type') || 'image/png',
-      'Cache-Control': 'public, max-age=86400',
-      'X-Mars-Source': upstream,
-      'Access-Control-Allow-Origin': '*'
-    });
-    return res.end(buf);
-  } catch (err) {
-    return send(res, 502, { error: `No se pudo consultar el tile NASA: ${err?.message || err}` });
-  }
-}
-
-async function handleWmtsInfo(req, res, url) {
-  if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
-  const requested = (url.searchParams.get('layers') || 'thermal').split(',').map(s => s.trim()).filter(Boolean);
-  const entries = await Promise.all(requested.map(async id => [id, await resolveWmtsTemplate(id)]));
-  return send(res, 200, { layers: Object.fromEntries(entries) });
-}
-
 async function serveStatic(req, res, url) {
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === '/') pathname = '/index.html';
@@ -215,10 +172,8 @@ async function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'MDEM200M global 200m / NASA-ESA-USGS-Esri', coverage: GLOBAL_BBOX });
+    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'MDEM200M global / NASA-ESA-USGS-Esri', coverage: GLOBAL_BBOX, batching: true });
     if (url.pathname === '/api/elevations') return handleElevations(req, res);
-    if (url.pathname === '/api/wmts-info') return handleWmtsInfo(req, res, url);
-    if (url.pathname === '/api/tile') return handleTileProxy(req, res, url);
     return serveStatic(req, res, url);
   } catch (err) {
     send(res, 500, { error: err.message });
