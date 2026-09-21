@@ -210,7 +210,7 @@ async function calculateMission(){
       setBusy(true,`Calculando tramo ${i} de ${points.length-1}…`);
     }
     const mission={};
-    modes.forEach(mode=>mission[mode]=aggregateMission(legsByMode,mode,$('returnBase').checked));
+    modes.forEach(mode=>mission[mode]=aggregateMission(legsByMode[mode],mode,$('returnBase').checked));
     currentMission=mission;
     renderMission(mission[document.querySelector('input[name="mode"]:checked').value]||mission.balanced);
     drawMissionRoutes(mission,document.querySelector('input[name="mode"]:checked').value);
