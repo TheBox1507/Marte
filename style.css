@@ -53,3 +53,10 @@ body{font-size:14px;background:linear-gradient(135deg,#080706,#100b08 60%,#09080
 .layerGroupLabel{font-size:8px;letter-spacing:1.6px;font-weight:850;color:#8d7c70;margin:14px 4px 5px}
 .layerRow{min-height:66px;padding:4px 2px!important;border-bottom:1px solid #2d211b!important;transition:background .18s ease,border-color .18s ease}.layerRow:hover{background:linear-gradient(90deg,#21150f,#17100d);border-color:#5b3b2d!important}.check{gap:11px!important;padding:10px 6px!important}.check input{width:22px!important;height:22px!important;cursor:pointer}.layerCopy{display:flex;flex-direction:column;gap:3px}.layerCopy strong{font-size:12px;color:#f4e8df}.layerCopy small{font-size:9px;color:#8f7e72;line-height:1.3}.layerStatus{min-width:86px!important;padding:7px 9px!important;font-size:8px!important;letter-spacing:.7px!important;box-sizing:border-box}.layerStatus.ready{background:#211a15;color:#d7c7bb;border-color:#5b493e}.layerStatus.loading{background:#332517;color:#ffd9a7;border-color:#ad7135;animation:statusPulse 1.25s ease-in-out infinite}.layerStatus.live{background:#12352e;color:#9be4ce;border-color:#3d8b76}.layerStatus.error{background:#4a2119;color:#ffd1c5;border-color:#a75641}
 @keyframes statusPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* V9 — capas NASA WMTS directas y estados de diagnóstico */
+.layerStatus.ready{background:#1b1713;color:#e2cbb9;border-color:#6a5040}
+.layerStatus.loading{background:#3b2816;color:#ffd6a6;border-color:#c17a31;animation:statusPulse 1.15s ease-in-out infinite}
+.layerStatus.live{background:#0f3b31;color:#adf0d9;border-color:#4ba48c}
+.layerStatus.error{background:#4a1f18;color:#ffd2c7;border-color:#b65b45}
+.layer-dust,.layer-dust-fallback,.layer-roughness{image-rendering:auto}

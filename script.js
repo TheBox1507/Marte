@@ -24,28 +24,75 @@ function buildLayers(){
   const projection = ol.proj.get('MARS:EQUIRECTANGULAR');
   const resolutions = Array.from({length:8},(_,z)=>0.703125 / Math.pow(2,z));
   const tileGrid = new ol.tilegrid.TileGrid({ extent:[-180,-90,180,90], origin:[-180,90], resolutions, tileSize:256 });
-  const nasa = (url) => new ol.source.XYZ({ projection, tileGrid, maxZoom:7, wrapX:true, tilePixelRatio:1, url, transition:0 });
-  const proxyTile = (layer) => `/api/tile?layer=${encodeURIComponent(layer)}&z={z}&x={x}&y={y}`;
-  const monitored = (url, layerName) => {
+  const nasa = (url) => new ol.source.XYZ({
+    projection,
+    tileGrid,
+    maxZoom:7,
+    wrapX:true,
+    crossOrigin:'anonymous',
+    tilePixelRatio:1,
+    url,
+    transition:0
+  });
+
+  // NASA Mars Trek publica estos productos como WMTS RESTful en proyección equirectangular.
+  // La cuadrícula global de Mars Trek usa 2x2^z columnas y 2^z filas.
+  const NASA_WMTS = {
+    roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png',
+    dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png',
+    dustIndex: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png'
+  };
+
+  const monitored = (url, layerName, options={}) => {
     const source=nasa(url);
-    let failures=0, successes=0;
-    source.on('tileloadstart',()=>markLayerLoading(layerName));
-    source.on('tileloadend',()=>{successes++;failures=0;markLayerLoaded(layerName);});
+    let failures=0, successes=0, timeoutId=null;
+    const finishLoading = () => { if(timeoutId){clearTimeout(timeoutId);timeoutId=null;} };
+    source.on('tileloadstart',()=>{
+      if(successes===0) markLayerLoading(layerName);
+      if(!timeoutId){ timeoutId=setTimeout(()=>{ if(successes===0) markLayerError(layerName); }, 10000); }
+    });
+    source.on('tileloadend',()=>{
+      successes++; failures=0; finishLoading(); markLayerLoaded(layerName);
+      if(options.onFirstSuccess) options.onFirstSuccess();
+    });
     source.on('tileloaderror',()=>{
       failures++;
-      if(successes===0 && failures>=6) markLayerError(layerName);
+      // Algunos tiles pueden no existir; no convertir un único fallo en "error de datos".
+      if(successes===0 && failures>=10) markLayerError(layerName);
+      if(options.onError) options.onError(failures);
     });
     return source;
   };
+
   molaLayer = new ol.layer.Tile({ source:monitored(D.map.globalTile,'mola'), opacity:1, zIndex:1 });
-  roughnessLayer = new ol.layer.Tile({ source:monitored(proxyTile('mola_roughness'),'roughness'), opacity:.58, visible:false, zIndex:3, className:'layer-roughness' });
-  dustLayer = new ol.layer.Tile({ source:monitored(proxyTile('TES_Dust'),'dust'), opacity:.48, visible:false, zIndex:4, className:'layer-dust' });
+  roughnessLayer = new ol.layer.Tile({ source:monitored(NASA_WMTS.roughness,'roughness'), opacity:.72, visible:false, zIndex:3, className:'layer-roughness' });
+
+  let dustFallbackActive=false;
+  const dustFallbackSource = monitored(NASA_WMTS.dustIndex,'dustIndex',{onFirstSuccess(){
+    if(dustFallbackActive){ setLayerStatus('dust','ÍNDICE TES','live'); }
+  }});
+  const dustPrimarySource = monitored(NASA_WMTS.dust,'dust',{
+    onFirstSuccess(){
+      dustFallbackActive=false;
+      dustFallbackLayer.setVisible(false);
+    },
+    onError(failures){
+      if(failures>=10 && !dustFallbackActive){
+        dustFallbackActive=true;
+        dustFallbackLayer.set('fallbackActive',true);
+        dustFallbackLayer.setVisible(dustLayer.getVisible());
+        setLayerStatus('dust','RESPALDO TES','live');
+      }
+    }
+  });
+  const dustFallbackLayer = new ol.layer.Tile({ source:dustFallbackSource, opacity:.66, visible:false, zIndex:4, className:'layer-dust-fallback' });
+  dustLayer = new ol.layer.Tile({ source:dustPrimarySource, opacity:.68, visible:false, zIndex:5, className:'layer-dust' });
+
   markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
-  return { projection, layers:[molaLayer,roughnessLayer,dustLayer,routeLayer,markerLayer] };
+  return { projection, layers:[molaLayer,roughnessLayer,dustFallbackLayer,dustLayer,routeLayer,markerLayer] };
 }
-
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
 function markLayerError(name){ setLayerStatus(name,'ERROR DE DATOS','error'); }
@@ -64,19 +111,9 @@ function routeStyle(selected,kind){
 }
 
 async function prepareWmtsTemplates(){
-  // The analytical layers are served through the application proxy to avoid browser CORS/WMTS template inconsistencies.
-  // We only verify that NASA Mars Trek advertises the requested products; loading is evaluated by visible tiles.
-  const checks=[['roughness','mola_roughness'],['dust','TES_Dust']];
-  for(const [uiName,layerId] of checks){
-    try{
-      const res=await fetch('/api/wmts-info?layers='+encodeURIComponent(layerId),{cache:'no-store'});
-      const json=await res.json();
-      if(json?.layers?.[layerId]) setLayerStatus(uiName,'DISPONIBLE','ready');
-      else setLayerStatus(uiName,'SIN SERVICIO','error');
-    }catch(e){
-      setLayerStatus(uiName,'DISPONIBLE','ready');
-    }
-  }
+  // Los productos globales se consumen directamente desde los servicios WMTS públicos de NASA Mars Trek.
+  setLayerStatus('roughness','LISTA','ready');
+  setLayerStatus('dust','LISTA','ready');
 }
 
 function initMap(){
@@ -413,7 +450,7 @@ $('saveMission').onclick=()=>{if(currentMission){saveHistoryEntry(document.query
 $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked; activeLayerNames[visible?'add':'delete'](layer);
-  if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust')dustLayer.setVisible(visible); if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
+  if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust'){dustLayer.setVisible(visible); const fb=map.getLayers().getArray().find(l=>l.get('className')==='layer-dust-fallback'); if(fb) fb.setVisible(visible && fb.get('fallbackActive')===true);} if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
   if(layer==='roughness'||layer==='dust') { if(visible) markLayerLoading(layer); else setLayerStatus(layer,'DISPONIBLE','ready'); }
   if(layer==='mola'&&visible) setLayerStatus('mola','ACTIVA','live');
   if(layer==='route') setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
