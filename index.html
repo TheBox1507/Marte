@@ -19,7 +19,7 @@
 <main class="appShell">
   <aside class="sidebar">
     <section>
-      <div class="sectionTitle">MISIÓN / REGIÓN</div>
+      <div class="sectionTitle">MISIÓN ACTIVA / REGIÓN</div>
       <div class="missionCard">
         <div class="missionBadge">M20</div>
         <div><strong>Mars 2020</strong><small>Perseverance · Jezero</small></div>
@@ -27,20 +27,21 @@
     </section>
 
     <section>
-      <div class="sectionTitle">CAPAS REALES</div>
-      <label class="check"><input type="checkbox" data-layer="mola" checked><span>Relieve MOLA + HRSC</span></label>
-      <label class="check"><input type="checkbox" data-layer="roughness"><span>Rugosidad MOLA</span></label>
-      <label class="check"><input type="checkbox" data-layer="dust"><span>Polvo TES</span></label>
-      <label class="check"><input type="checkbox" data-layer="route" checked><span>Rutas calculadas</span></label>
-      <label class="check"><input type="checkbox" data-layer="points" checked><span>Puntos de referencia</span></label>
+      <div class="sectionTitle">CAPAS CARTOGRÁFICAS</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span>Relieve MOLA + HRSC</span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span>Rugosidad MOLA</span></span><b class="layerStatus" data-layer-status="roughness">LISTA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="dust"><span>Polvo TES</span></span><b class="layerStatus" data-layer-status="dust">LISTA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span>Rutas calculadas</span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span>Puntos de referencia</span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
     </section>
 
     <section>
-      <div class="sectionTitle">PLANIFICACIÓN DE MISIÓN</div>
+      <div class="sectionTitle">PLANIFICACIÓN</div>
       <button class="action" id="setOrigin"><span>◉</span> Usar lugar de aterrizaje como base</button>
       <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
       <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
-      <button class="action" id="calculate" disabled><span>⌁</span> Calcular misión</button>
+      <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
+      <button class="action saveAction" id="saveMission" disabled><span>▣</span> Guardar misión</button>
       <button class="action ghost" id="clearRoute"><span>×</span> Limpiar misión</button>
       <div class="missionCounter"><span>PUNTOS PLANIFICADOS</span><b id="pointCount">0</b></div>
     </section>
@@ -52,8 +53,15 @@
       <p class="sideNote">Toca el mapa mientras el modo misión está activo para añadir tantos objetivos y desvíos como necesites. Puedes reordenar o marcar cada objetivo como obligatorio/opcional.</p>
     </section>
 
+
+    <section class="historyPanel">
+      <div class="sectionTitle">HISTORIAL DE MISIONES</div>
+      <div id="historyList" class="historyList"></div>
+      <p class="sideNote">Se conserva en este navegador. Puedes abrir una misión y recalcularla con nuevos parámetros.</p>
+    </section>
+
     <section class="legendBox">
-      <div class="sectionTitle">MODO DE RUTA</div>
+      <div class="sectionTitle">ESTRATEGIA DE RUTA</div>
       <label class="modeOption"><input type="radio" name="mode" value="balanced" checked><span><b>Equilibrada</b><small>Distancia + terreno</small></span></label>
       <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
       <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
@@ -107,11 +115,11 @@
     </section>
 
     <section class="card">
-      <div class="sectionTitle">PARAMETROS OPERACIONALES</div>
+      <div class="sectionTitle">PARÁMETROS OPERACIONALES</div>
       <label class="inputRow"><span>Velocidad nominal</span><input id="speed" type="number" min="0.1" max="10" step="0.1" value="1.2"><em>km/h</em></label>
       <label class="inputRow"><span>Tiempo máximo EVA</span><input id="evaTime" type="number" min="0.5" max="24" step="0.5" value="8"><em>h</em></label>
       <label class="inputRow"><span>Margen de retorno</span><input id="returnMargin" type="number" min="0" max="80" step="5" value="25"><em>%</em></label>
-      <button class="primary" id="recalculate" disabled>Recalcular con estos parámetros</button>
+      <button class="primary recalcAction" id="recalculate" disabled><span>↻</span> Recalcular misión con estos parámetros</button>
     </section>
 
     <section class="card">
