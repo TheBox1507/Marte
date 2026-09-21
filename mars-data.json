@@ -11,7 +11,12 @@
     "lat": 18.44463,
     "lon": 77.45088,
     "zoom": 4,
-    "bbox": [77.20, 18.18, 77.70, 18.70]
+    "bbox": [
+      77.2,
+      18.18,
+      77.7,
+      18.7
+    ]
   },
   "referencePoints": [
     {
@@ -50,6 +55,9 @@
     "globalTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
     "roughnessTile": "https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png",
     "dustTile": "https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png",
-    "maxZoom": 7
+    "maxZoom": 7,
+    "roughnessCapabilities": "https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/WMTSCapabilities.xml",
+    "dustCapabilities": "https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/WMTSCapabilities.xml",
+    "dustIndexTile": "https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png"
   }
 }

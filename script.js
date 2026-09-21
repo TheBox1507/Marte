@@ -24,20 +24,34 @@ function buildLayers(){
   const projection = ol.proj.get('MARS:EQUIRECTANGULAR');
   const resolutions = Array.from({length:8},(_,z)=>0.703125 / Math.pow(2,z));
   const tileGrid = new ol.tilegrid.TileGrid({ extent:[-180,-90,180,90], origin:[-180,90], resolutions, tileSize:256 });
-  const nasa = id => new ol.source.XYZ({ projection, tileGrid, crossOrigin:'anonymous', maxZoom:7, url:D.map[id] });
-  const monitored = (id, layerName) => {
-    const source = nasa(id);
-    let failures=0, successes=0;
-    source.on('tileloadstart', () => markLayerLoading(layerName));
-    source.on('tileloaderror', () => { failures++; if(successes===0 && failures>=4) markLayerError(layerName); });
-    source.on('tileloadend', () => { successes++; markLayerLoaded(layerName); });
+  const nasa = (url, format='image/png') => new ol.source.XYZ({ projection, tileGrid, crossOrigin:'anonymous', maxZoom:7, wrapX:true, tilePixelRatio:1, url, transition:0 });
+  const monitored = (url, layerName, fallbackUrl=null) => {
+    let source=nasa(url); let failures=0; let successes=0; let usingFallback=false;
+    const attach=(src)=>{
+      src.on('tileloadstart',()=>markLayerLoading(layerName));
+      src.on('tileloadend',()=>{successes++;markLayerLoaded(layerName);});
+      src.on('tileloaderror',()=>{
+        failures++;
+        if(fallbackUrl && !usingFallback && failures>=3){
+          usingFallback=true; failures=0; source=nasa(fallbackUrl); 
+          if(layerName==='dust' && dustLayer) dustLayer.setSource(source);
+          markLayerLoading(layerName);
+          source.on('tileloadend',()=>markLayerLoaded(layerName));
+          source.on('tileloaderror',()=>markLayerError(layerName));
+          source.refresh();
+          return;
+        }
+        if(successes===0 && failures>=3) markLayerError(layerName);
+      });
+    };
+    attach(source);
     return source;
   };
-  molaLayer = new ol.layer.Tile({ source:monitored('globalTile','mola'), opacity:1 });
-  roughnessLayer = new ol.layer.Tile({ source:monitored('roughnessTile','roughness'), opacity:.68, visible:false, className:'layer-roughness' });
-  dustLayer = new ol.layer.Tile({ source:monitored('dustTile','dust'), opacity:.58, visible:false, className:'layer-dust' });
-  markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')) });
-  routeLayer = new ol.layer.Vector({ source:new ol.source.Vector() });
+  molaLayer = new ol.layer.Tile({ source:monitored(D.map.globalTile,'mola'), opacity:1, zIndex:1 });
+  roughnessLayer = new ol.layer.Tile({ source:monitored(D.map.roughnessTile,'roughness'), opacity:.86, visible:false, zIndex:3, className:'layer-roughness' });
+  dustLayer = new ol.layer.Tile({ source:monitored(D.map.dustTile,'dust',D.map.dustIndexTile), opacity:.72, visible:false, zIndex:4, className:'layer-dust' });
+  markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
+  routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
   return { projection, layers:[molaLayer,roughnessLayer,dustLayer,routeLayer,markerLayer] };
 }
@@ -56,6 +70,19 @@ function pointStyle(kind,label){
 function routeStyle(selected,kind){
   const color = selected ? '#ff8a58' : kind==='risk' ? '#63d0a0' : kind==='distance' ? '#f0e6d5' : '#f0bf68';
   return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:selected?6:2.5, lineDash:selected?undefined:[9,8]}) });
+}
+
+async function prepareWmtsTemplates(){
+  try{
+    const res=await fetch('/api/wmts-info?layers=mola_roughness,TES_Dust,tes_ruffdust');
+    if(!res.ok)return;
+    const json=await res.json();
+    if(json?.layers?.mola_roughness?.template)D.map.roughnessTile=json.layers.mola_roughness.template;
+    if(json?.layers?.TES_Dust?.template)D.map.dustTile=json.layers.TES_Dust.template;
+    if(json?.layers?.tes_ruffdust?.template)D.map.dustIndexTile=json.layers.tes_ruffdust.template;
+    document.querySelector('[data-layer-status="roughness"]')?.setAttribute('data-wmts-ready','1');
+    document.querySelector('[data-layer-status="dust"]')?.setAttribute('data-wmts-ready','1');
+  }catch(e){ console.warn('WMTS config no disponible; se usan plantillas de respaldo.',e); }
 }
 
 function initMap(){
@@ -400,4 +427,4 @@ $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());initMap();renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareWmtsTemplates();initMap();renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();

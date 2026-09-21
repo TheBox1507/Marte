@@ -149,6 +149,53 @@ async function handleElevations(req, res) {
   }
 }
 
+const WMTS_LAYERS = {
+  mola_roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/WMTSCapabilities.xml',
+  TES_Dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/WMTSCapabilities.xml',
+  tes_ruffdust: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/WMTSCapabilities.xml'
+};
+const wmtsCache = new Map();
+
+function decodeXmlEntities(value='') {
+  return value.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&#39;', "'");
+}
+
+async function resolveWmtsTemplate(layerId) {
+  if (wmtsCache.has(layerId)) return wmtsCache.get(layerId);
+  const capabilitiesUrl = WMTS_LAYERS[layerId];
+  if (!capabilitiesUrl) return null;
+  try {
+    const response = await fetch(capabilitiesUrl, { headers: { 'Accept': 'application/xml,text/xml,*/*' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const xml = await response.text();
+    const resourceMatch = xml.match(/<ResourceURL\b[^>]*?template=["']([^"']+)["'][^>]*>/i);
+    if (resourceMatch?.[1]) {
+      const template = decodeXmlEntities(resourceMatch[1])
+        .replace(/\{TileMatrix\}/g, '{z}')
+        .replace(/\{TileRow\}/g, '{y}')
+        .replace(/\{TileCol\}/g, '{x}');
+      const info = { template, source: 'NASA Mars Trek WMTS GetCapabilities' };
+      wmtsCache.set(layerId, info);
+      return info;
+    }
+  } catch (_) {}
+  const fallbackTemplates = {
+    mola_roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png',
+    TES_Dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png',
+    tes_ruffdust: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png'
+  };
+  const info = fallbackTemplates[layerId] ? { template: fallbackTemplates[layerId], source: 'NASA Mars Trek REST template (fallback)' } : null;
+  if (info) wmtsCache.set(layerId, info);
+  return info;
+}
+
+async function handleWmtsInfo(req, res, url) {
+  if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
+  const requested = (url.searchParams.get('layers') || 'mola_roughness,TES_Dust,tes_ruffdust').split(',').map(s => s.trim()).filter(Boolean);
+  const entries = await Promise.all(requested.map(async id => [id, await resolveWmtsTemplate(id)]));
+  return send(res, 200, { layers: Object.fromEntries(entries) });
+}
+
 async function serveStatic(req, res, url) {
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === '/') pathname = '/index.html';
@@ -172,6 +219,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'CTX Jezero 20m / control MOLA', coverage: CTX_BBOX });
     if (url.pathname === '/api/elevations') return handleElevations(req, res);
+    if (url.pathname === '/api/wmts-info') return handleWmtsInfo(req, res, url);
     return serveStatic(req, res, url);
   } catch (err) {
     send(res, 500, { error: err.message });
