@@ -3,18 +3,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { URL } from 'node:url';
-import { fromUrl } from 'geotiff';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8000);
 
-// Global MOLA DEM, public domain, published by USGS Astrogeology.
-// 463 m/pixel, global coverage (-180..180, -90..90).
-const MOLA_DEM_URL = 'https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif';
+// Global Mars elevation service exposed by a public ArcGIS ImageServer.
+// MDEM200M is a global Mars elevation layer documented in ArcGIS' Mars sample.
+// We use ImageServer/getSamples so the route engine receives actual raster values.
+const MARS_ELEVATION_SERVICE = 'https://astro.arcgis.com/arcgis/rest/services/OnMars/MDEM200M/ImageServer/getSamples';
 const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
-const DEM_WIDTH = 256;
-const DEM_HEIGHT = 256;
-let demPromise = null;
 const sampleCache = new Map();
 
 function cors(res) {
@@ -28,27 +25,44 @@ function send(res, status, body, type='application/json; charset=utf-8') {
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
-function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 function cacheKey(p) { return `${Number(p.lat).toFixed(5)},${Number(p.lon).toFixed(5)}`; }
 
-async function loadDem() {
-  if (!demPromise) {
-    demPromise = (async () => {
-      const tiff = await fromUrl(MOLA_DEM_URL);
-      const image = await tiff.getImage();
-      return image;
-    })().catch(err => {
-      demPromise = null;
-      throw err;
-    });
-  }
-  return demPromise;
+function parseSampleValue(sample) {
+  const raw = sample?.value ?? sample?.attributes?.Value ?? sample?.attributes?.value;
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  const first = String(raw).split(',')[0].trim();
+  if (!first || /^nodata$/i.test(first)) return null;
+  const v = Number(first);
+  return Number.isFinite(v) ? v : null;
+}
+
+async function requestMdemSamples(points) {
+  const geometry = {
+    points: points.map(p => [Number(p.lon), Number(p.lat)]),
+    spatialReference: { wkid: 4326 }
+  };
+  const params = new URLSearchParams({
+    geometryType: 'esriGeometryMultipoint',
+    geometry: JSON.stringify(geometry),
+    interpolation: 'RSP_BilinearInterpolation',
+    returnFirstValueOnly: 'true',
+    f: 'json'
+  });
+  const response = await fetch(`${MARS_ELEVATION_SERVICE}?${params}`, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(30000)
+  });
+  if (!response.ok) throw new Error(`MDEM200M HTTP ${response.status}`);
+  const json = await response.json();
+  if (json?.error) throw new Error(json.error.message || 'MDEM200M devolvió un error.');
+  if (!Array.isArray(json?.samples)) throw new Error('MDEM200M no devolvió muestras.');
+  return json.samples;
 }
 
 async function sampleElevations(points) {
   const valid = points.map((p, i) => ({ i, lat: Number(p.lat), lon: Number(p.lon) }))
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
-
   for (const p of valid) {
     if (p.lat < -90 || p.lat > 90 || p.lon < -180 || p.lon > 180) {
       throw new Error(`Coordenada fuera del rango planetario: ${p.lat.toFixed(5)}°, ${p.lon.toFixed(5)}°.`);
@@ -56,63 +70,25 @@ async function sampleElevations(points) {
   }
   if (!valid.length) throw new Error('No hay coordenadas válidas.');
 
-  const missing = [];
   const values = new Map();
+  const missing = [];
   for (const p of valid) {
     const k = cacheKey(p);
     if (sampleCache.has(k)) values.set(k, sampleCache.get(k));
     else missing.push(p);
   }
-  if (!missing.length) return points.map(p => ({ ...p, elevationM: values.get(cacheKey(p)) ?? null }));
 
-  const image = await loadDem();
-  const rasterWidth = image.getWidth();
-  const rasterHeight = image.getHeight();
-
-  // Get the exact published image bounds when the GeoTIFF exposes them.
-  let bbox = GLOBAL_BBOX;
-  try {
-    const b = image.getBoundingBox();
-    if (Array.isArray(b) && b.length === 4 && b.every(Number.isFinite)) {
-      bbox = { minLon: b[0], minLat: b[1], maxLon: b[2], maxLat: b[3] };
+  for (let offset = 0; offset < missing.length; offset += 250) {
+    const chunk = missing.slice(offset, offset + 250);
+    const samples = await requestMdemSamples(chunk);
+    for (let j = 0; j < chunk.length; j++) {
+      const byId = samples.find(s => Number(s?.locationId) === j + 1);
+      const sample = byId || (samples.length === chunk.length ? samples[j] : null);
+      const elev = parseSampleValue(sample);
+      const k = cacheKey(chunk[j]);
+      sampleCache.set(k, elev);
+      values.set(k, elev);
     }
-  } catch (_) {}
-
-  function pixel(lon, lat) {
-    const x = (lon - bbox.minLon) / (bbox.maxLon - bbox.minLon) * (rasterWidth - 1);
-    const y = (bbox.maxLat - lat) / (bbox.maxLat - bbox.minLat) * (rasterHeight - 1);
-    return { x, y };
-  }
-
-  const pix = missing.map(p => ({ ...p, ...pixel(p.lon, p.lat) }));
-  const pad = 2;
-  const x0 = clamp(Math.floor(Math.min(...pix.map(p => p.x)) - pad), 0, rasterWidth - 1);
-  const y0 = clamp(Math.floor(Math.min(...pix.map(p => p.y)) - pad), 0, rasterHeight - 1);
-  const x1 = clamp(Math.ceil(Math.max(...pix.map(p => p.x)) + pad + 1), 1, rasterWidth);
-  const y1 = clamp(Math.ceil(Math.max(...pix.map(p => p.y)) + pad + 1), 1, rasterHeight);
-
-  // Read the needed part of the published DEM and resample it to a compact grid.
-  const outW = Math.min(192, Math.max(32, x1 - x0));
-  const outH = Math.min(192, Math.max(32, y1 - y0));
-  const rasters = await image.readRasters({
-    window: [x0, y0, x1, y1],
-    width: outW,
-    height: outH,
-    samples: [0],
-    interleave: true,
-    resampleMethod: 'bilinear'
-  });
-  const data = rasters;
-
-  for (const p of missing) {
-    const q = pixel(p.lon, p.lat);
-    const rx = clamp(((q.x - x0) / Math.max(1, (x1 - x0 - 1))) * (outW - 1), 0, outW - 1);
-    const ry = clamp(((q.y - y0) / Math.max(1, (y1 - y0 - 1))) * (outH - 1), 0, outH - 1);
-    const idx = Math.round(ry) * outW + Math.round(rx);
-    const raw = Number(data[idx]);
-    const elev = Number.isFinite(raw) ? raw : null;
-    sampleCache.set(cacheKey(p), elev);
-    values.set(cacheKey(p), elev);
   }
 
   return points.map(p => ({ ...p, elevationM: values.get(cacheKey(p)) ?? null }));
@@ -130,10 +106,10 @@ async function handleElevations(req, res) {
   try {
     const out = await sampleElevations(points);
     const missing = out.filter(p => !Number.isFinite(p.elevationM)).length;
-    if (missing === out.length) return send(res, 502, { error: 'El DEM global MOLA no devolvió valores de elevación.' });
+    if (missing === out.length) return send(res, 502, { error: 'El servicio MDEM200M no devolvió valores de elevación para los puntos solicitados.' });
     return send(res, 200, {
-      source: 'NASA MOLA / USGS Astrogeology Mars MGS MOLA DEM',
-      resolutionM: 463,
+      source: 'NASA / ESA / USGS / Esri — MDEM200M',
+      resolutionM: 200,
       coverage: GLOBAL_BBOX,
       points: out
     });
@@ -239,7 +215,7 @@ async function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'MOLA global 463m / USGS Astrogeology', coverage: GLOBAL_BBOX });
+    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'MDEM200M global 200m / NASA-ESA-USGS-Esri', coverage: GLOBAL_BBOX });
     if (url.pathname === '/api/elevations') return handleElevations(req, res);
     if (url.pathname === '/api/wmts-info') return handleWmtsInfo(req, res, url);
     if (url.pathname === '/api/tile') return handleTileProxy(req, res, url);

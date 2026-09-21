@@ -199,17 +199,27 @@ function haversine(a,b){
   return 2*MARTIAN_RADIUS*Math.asin(Math.sqrt(h));
 }
 function pathMetrics(path){
-  let d=0,gain=0,maxSlope=0,sumSlope=0,count=0;
+  let d=0,gain=0,descent=0,change=0,maxSlope=0,sumSlope=0,count=0;
   for(let i=1;i<path.length;i++){
     const dist=haversine(path[i-1],path[i]); const e1=path[i-1].elevationM,e2=path[i].elevationM;
     d+=dist;
     if(Number.isFinite(e1)&&Number.isFinite(e2)&&dist>0){
-      const rise=e2-e1; if(rise>0) gain+=rise;
+      const rise=e2-e1;
+      if(rise>0) gain+=rise; else descent+=Math.abs(rise);
+      change+=Math.abs(rise);
       const slope=Math.atan2(Math.abs(rise)/1000,dist)*180/Math.PI;
       maxSlope=Math.max(maxSlope,slope); sumSlope+=slope; count++; path[i].slopeDeg=slope;
     }
   }
-  return {distanceKm:d,gainM:gain,maxSlopeDeg:maxSlope,avgSlopeDeg:count?sumSlope/count:null,segments:count};
+  return {
+    distanceKm:d,
+    gainM:gain,
+    descentM:descent,
+    elevationChangeM:change,
+    maxSlopeDeg:count?maxSlope:null,
+    avgSlopeDeg:count?sumSlope/count:null,
+    segments:count
+  };
 }
 function nearestNode(grid,p){ return grid.nodes.reduce((best,n)=>!best||haversine(n,p)<haversine(best,p)?n:best,null); }
 function neighbors(node,grid){
@@ -218,21 +228,23 @@ function neighbors(node,grid){
 function heuristic(n,goal,mode,params){
   const d=haversine(n,goal);
   if(mode==='distance') return d;
-  const speed=Math.max(.1,params.speed);
-  const timeTerm=d/speed;
-  return mode==='risk' ? d*1.12 + timeTerm*.28 : d*1.05 + timeTerm*.12;
+  return mode==='risk' ? d*1.03 : d*1.01;
 }
 function edgeCost(a,b,mode,params){
   const d=haversine(a,b);
-  const safeSlope = (Number.isFinite(a.elevationM)&&Number.isFinite(b.elevationM)&&d>0)
-    ? Math.atan2(Math.abs(a.elevationM-b.elevationM)/1000,Math.max(d,.001))*180/Math.PI : 0;
   const speed=Math.max(.1,params.speed);
   const travelHours=d/speed;
-  const slopeTimeFactor=1+clamp(safeSlope/30,0,1.2);
-  const timeCost=travelHours*slopeTimeFactor;
+  const elevReady=Number.isFinite(a.elevationM)&&Number.isFinite(b.elevationM)&&d>0;
+  const rise=elevReady?(b.elevationM-a.elevationM):0;
+  const slope=elevReady?Math.atan2(Math.abs(rise)/1000,Math.max(d,.001))*180/Math.PI:0;
+  const slopeNorm=Math.min(1.5,slope/15);
   if(mode==='distance') return d;
-  if(mode==='risk') return d*(1+Math.pow(safeSlope/7,2)*1.7) + timeCost*.28;
-  return d*(1+Math.pow(safeSlope/11,1.45)*.72) + timeCost*.12;
+  if(mode==='risk') {
+    const slopePenalty=d*(1 + Math.pow(slope/6,2)*2.6);
+    const ascentPenalty=Math.max(0,rise)/1000*0.35;
+    return slopePenalty + travelHours*0.22 + ascentPenalty;
+  }
+  return d*(1 + Math.pow(slopeNorm,1.35)*0.95) + travelHours*0.04 + Math.max(0,rise)/1000*0.12;
 }
 function aStar(grid,start,goal,mode,params){
   const open=[start], came=new Map(), g=new Map([[key(start),0]]), f=new Map([[key(start),heuristic(start,goal,mode,params)]]);
@@ -301,9 +313,11 @@ async function calculateLeg(a,b,mode,params){
   return {from:a,to:b,path,metrics,durationHours:estimateDuration(metrics,params)};
 }
 function riskScore(m){
-  const slope=Number.isFinite(m.maxSlopeDeg)?m.maxSlopeDeg:30;
-  const gainPenalty=clamp(m.gainM/600,0,1)*25;
-  return Math.round(clamp((slope/25)*70+gainPenalty,0,100));
+  if(!m || !Number.isFinite(m.maxSlopeDeg)) return null;
+  const slopePenalty=clamp(m.maxSlopeDeg/25,0,1)*70;
+  const terrainPenalty=clamp((m.elevationChangeM||0)/1000,0,1)*20;
+  const avgPenalty=clamp((m.avgSlopeDeg||0)/18,0,1)*10;
+  return Math.round(clamp(slopePenalty+terrainPenalty+avgPenalty,0,100));
 }
 function riskLabel(score){ if(score<30)return 'Bajo'; if(score<55)return 'Moderado'; if(score<75)return 'Alto'; return 'Muy alto'; }
 function normalizeParams(){
@@ -361,7 +375,8 @@ async function chooseSequence(mode,basePoints,returnBase,params,legCache){
     includedCandidates.push(candidate);
     const trialSeq=candidateSequence();
     const trialMission=await evaluateSequence(trialSeq,mode,params,legCache);
-    if(trialMission.duration<=available){
+    const strategyAllows = mode==='distance' ? true : mode==='balanced' ? (trialMission.score===null || trialMission.score<=78) : (trialMission.score===null || trialMission.score<=62);
+    if(trialMission.duration<=available && strategyAllows){
       includedOptional.push(candidate.p);
       currentSeq=trialSeq;
     }else{
@@ -382,18 +397,21 @@ async function chooseSequence(mode,basePoints,returnBase,params,legCache){
 }
 
 function aggregateMission(legs,mode,params,sequence){
-  const metrics={distanceKm:0,gainM:0,maxSlopeDeg:0,avgSlopeDeg:null,segments:0}; let weightedSlope=0,weightedDistance=0;
+  const metrics={distanceKm:0,gainM:0,descentM:0,elevationChangeM:0,maxSlopeDeg:null,avgSlopeDeg:null,segments:0}; let weightedSlope=0,weightedDistance=0;
   legs.forEach(leg=>{
     metrics.distanceKm+=leg.metrics.distanceKm;
     metrics.gainM+=leg.metrics.gainM;
-    metrics.maxSlopeDeg=Math.max(metrics.maxSlopeDeg,leg.metrics.maxSlopeDeg);
+    if(Number.isFinite(leg.metrics.maxSlopeDeg)) metrics.maxSlopeDeg=metrics.maxSlopeDeg===null?leg.metrics.maxSlopeDeg:Math.max(metrics.maxSlopeDeg,leg.metrics.maxSlopeDeg);
+    metrics.descentM+=leg.metrics.descentM;
+    metrics.elevationChangeM+=leg.metrics.elevationChangeM;
     metrics.segments+=leg.metrics.segments;
     if(Number.isFinite(leg.metrics.avgSlopeDeg)){weightedSlope+=leg.metrics.avgSlopeDeg*leg.metrics.distanceKm;weightedDistance+=leg.metrics.distanceKm;}
   });
   metrics.avgSlopeDeg=weightedDistance?weightedSlope/weightedDistance:null;
   const dwellMinutes=sequence.reduce((s,p)=>s+(Number(p.dwellMin)||0),0);
   const duration=estimateDuration(metrics,params)+dwellMinutes/60;
-  const score=legs.length?Math.max(...legs.map(x=>riskScore(x.metrics))):0;
+  const scores=legs.map(x=>riskScore(x.metrics)).filter(Number.isFinite);
+  const score=scores.length?Math.max(...scores):null;
   return {mode,legs,metrics,dwellMinutes,duration,score,sequence};
 }
 
@@ -430,11 +448,14 @@ function renderMission(mission){
   const omitted=mission.omittedOptional?.length||0;
   const selectedLabel=mission.mode==='distance'?'Misión más directa':mission.mode==='risk'?'Misión de menor exposición':'Misión equilibrada';
   $('routeName').textContent=selectedLabel;
-  $('routeStatus').textContent=mission.overBudget?'FUERA DE LÍMITE':`${riskLabel(score).toUpperCase()} · ${score}/100`;
+  $('routeStatus').textContent=mission.overBudget?'FUERA DE LÍMITE':Number.isFinite(score)?`${riskLabel(score).toUpperCase()} · ${score}/100`:'SIN EVALUACIÓN';
   $('routeStatus').className=`pill ${mission.overBudget?'warning':''}`;
   $('routeDescription').textContent=`${included} punto(s) incluidos · ${mission.legs.length} tramo(s) · ${omitted?`${omitted} opcional(es) omitido(s) por restricciones`: 'sin opcionales omitidos'} · ${mission.strategyDescription}`;
-  $('distance').textContent=`${m.distanceKm.toFixed(2)} km`; $('duration').textContent=formatHours(mission.duration); $('maxSlope').textContent=Number.isFinite(m.maxSlopeDeg)?`${m.maxSlopeDeg.toFixed(1)}°`:'—'; $('gain').textContent=Number.isFinite(m.gainM)?`${Math.round(m.gainM)} m`:'—';
-  $('riskNumber').textContent=score; $('riskLabel').textContent=riskLabel(score); $('riskBar').style.width=`${score}%`; $('avgSlope').textContent=Number.isFinite(m.avgSlopeDeg)?`${m.avgSlopeDeg.toFixed(1)}°`:'—'; $('segments').textContent=m.segments; $('legsCount').textContent=mission.legs.length; $('dwellTotal').textContent=`${m.dwellMinutes} min`; $('missionMargin').textContent=formatSignedMargin(margin);
+  $('distance').textContent=Number.isFinite(m.distanceKm)?`${m.distanceKm.toFixed(2)} km`:'—';
+  $('duration').textContent=formatHours(mission.duration);
+  $('maxSlope').textContent=Number.isFinite(m.maxSlopeDeg)?`${m.maxSlopeDeg.toFixed(1)}°`:'—';
+  $('gain').textContent=Number.isFinite(m.elevationChangeM)?`${Math.round(m.elevationChangeM)} m`:'—';
+  $('riskNumber').textContent=Number.isFinite(score)?score:'—'; $('riskLabel').textContent=Number.isFinite(score)?riskLabel(score):'Sin evaluación'; $('riskBar').style.width=`${Number.isFinite(score)?score:0}%`; $('avgSlope').textContent=Number.isFinite(m.avgSlopeDeg)?`${m.avgSlopeDeg.toFixed(1)}°`:'—'; $('segments').textContent=m.segments; $('legsCount').textContent=mission.legs.length; $('dwellTotal').textContent=`${Number.isFinite(mission.dwellMinutes)?mission.dwellMinutes:0} min`; $('missionMargin').textContent=formatSignedMargin(margin);
   $('calcParams').textContent=`${mission.params.speed.toFixed(1)} km/h · EVA ${mission.params.evaTime.toFixed(1)} h · margen ${mission.params.returnMargin}%`;
   $('recalculate').disabled=false; $('saveMission').disabled=false;
   if($('lastCalculated')) $('lastCalculated').textContent=lastCalculatedAt?`Último cálculo: ${lastCalculatedAt.toLocaleString('es-NI',{dateStyle:'short',timeStyle:'short'})}`:'Último cálculo: —';
