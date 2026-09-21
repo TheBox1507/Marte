@@ -36,11 +36,20 @@
     </section>
 
     <section>
-      <div class="sectionTitle">PLANIFICACIÓN</div>
-      <button class="action" id="setOrigin"><span>◉</span> Usar lugar de aterrizaje</button>
-      <button class="action" id="planMode"><span>＋</span> Seleccionar A → B en el mapa</button>
-      <button class="action" id="calculate" disabled><span>⌁</span> Calcular rutas</button>
-      <button class="action ghost" id="clearRoute"><span>×</span> Limpiar selección</button>
+      <div class="sectionTitle">PLANIFICACIÓN DE MISIÓN</div>
+      <button class="action" id="setOrigin"><span>◉</span> Usar lugar de aterrizaje como base</button>
+      <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
+      <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
+      <button class="action" id="calculate" disabled><span>⌁</span> Calcular misión</button>
+      <button class="action ghost" id="clearRoute"><span>×</span> Limpiar misión</button>
+      <div class="missionCounter"><span>PUNTOS PLANIFICADOS</span><b id="pointCount">0</b></div>
+    </section>
+
+    <section class="waypointPanel">
+      <div class="sectionTitle">SECUENCIA DE VISITA</div>
+      <div id="waypointList" class="waypointList"></div>
+      <label class="returnCheck"><input id="returnBase" type="checkbox" checked><span>Regresar a la base al finalizar</span></label>
+      <p class="sideNote">Toca el mapa mientras el modo misión está activo para añadir tantos objetivos y desvíos como necesites. Puedes reordenar o marcar cada objetivo como obligatorio/opcional.</p>
     </section>
 
     <section class="legendBox">
@@ -76,12 +85,14 @@
     <section class="card">
       <div class="sectionTitle">RUTA SELECCIONADA</div>
       <div class="routeHeader"><h2 id="routeName">Esperando selección</h2><span id="routeStatus" class="pill">SIN RUTA</span></div>
-      <p id="routeDescription">Activa “Seleccionar A → B” y toca dos puntos del mapa.</p>
+      <p id="routeDescription">Crea una misión y añade dos o más puntos. Cada tramo se calcula sobre el terreno real y después se consolida la misión completa.</p>
       <div class="metricGrid">
         <div><small>DISTANCIA TOTAL</small><strong id="distance">—</strong></div>
         <div><small>DURACIÓN EST.</small><strong id="duration">—</strong></div>
         <div><small>PENDIENTE MÁX.</small><strong id="maxSlope">—</strong></div>
         <div><small>DESNIVEL ACUM.</small><strong id="gain">—</strong></div>
+        <div><small>TRAMOS</small><strong id="legsCount">—</strong></div>
+        <div><small>TIEMPO EN OBJETIVOS</small><strong id="dwellTotal">—</strong></div>
       </div>
     </section>
 
@@ -91,6 +102,7 @@
       <div class="riskBar"><i id="riskBar"></i></div>
       <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
       <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
+      <div class="row"><span>Margen operacional restante</span><b id="missionMargin">—</b></div>
       <div class="row"><span>Fuente del relieve</span><b>CTX 20 m · MOLA</b></div>
     </section>
 
