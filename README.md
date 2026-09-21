@@ -70,3 +70,10 @@ Por eso, el **índice de riesgo** debe interpretarse como una herramienta experi
 - `server.mjs`: servidor local y proxy de muestreo MOLA.
 - `data/mars-data.json`: configuración y fuentes.
 - `package.json`: arranque del servidor.
+
+
+## Elevación usada por el motor de rutas (versión Render)
+
+El cálculo de rutas dentro de Jezero utiliza el **Mars 2020 Science Investigation CTX DEM Mosaic**, un DEM de 20 m/píxel publicado por el USGS Astrogeology Science Center. El producto cubre el cráter Jezero y fue localizado verticalmente al conjunto MOLA. El servidor lee el GeoTIFF remoto y muestrea los valores necesarios para la malla A*.
+
+Fuente: https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic

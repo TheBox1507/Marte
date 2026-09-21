@@ -149,13 +149,15 @@ function forceEndpoints(path,a,b){
 
 async function getElevations(points){
   const response=await fetch('/api/elevations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({points})});
-  if(!response.ok) throw new Error(`Servicio MOLA: ${response.status}`);
-  const json=await response.json(); return json.points;
+  let json=null; try{ json=await response.json(); }catch{}
+  if(!response.ok) throw new Error(json?.error || `Servicio de elevación: ${response.status}`);
+  if(!Array.isArray(json?.points)) throw new Error('El servicio de elevación no devolvió puntos.');
+  return json.points;
 }
 
 async function calculateRoutes(){
   if(!origin||!destination) return;
-  setBusy(true,'Consultando elevación MOLA…');
+  setBusy(true,'Consultando DEM CTX de Jezero (20 m)…');
   try{
     const grid=buildGrid(origin,destination,13,13);
     const samples=grid.nodes.map(n=>({lat:n.lat,lon:n.lon}));
@@ -165,7 +167,7 @@ async function calculateRoutes(){
     for(const n of grid.nodes) n.elevationM=mapByCoord.get(`${n.lat.toFixed(5)},${n.lon.toFixed(5)}`);
     origin.elevationM=elevated[elevated.length-2]?.elevationM;
     destination.elevationM=elevated[elevated.length-1]?.elevationM;
-    if(!grid.nodes.some(n=>Number.isFinite(n.elevationM))) throw new Error('No se recibieron valores de elevación de MOLA.');
+    if(!grid.nodes.some(n=>Number.isFinite(n.elevationM))) throw new Error('No se recibieron valores de elevación del DEM CTX de Jezero.');
 
     const modes=['distance','balanced','risk'];
     const routes=[];
@@ -203,7 +205,7 @@ function renderRoute(route){
   const m=route.metrics,score=riskScore(m),duration=estimateDuration(m),maxTime=Number($('evaTime').value)||8,margin=Number($('returnMargin').value)||25;
   $('routeName').textContent=route.mode==='distance'?'Ruta más directa':route.mode==='risk'?'Ruta de menor exposición':'Ruta equilibrada';
   $('routeStatus').textContent=`${riskLabel(score).toUpperCase()} · ${score}/100`;
-  $('routeDescription').textContent=`A → B calculada sobre una malla local y evaluada con elevaciones muestreadas del modelo MOLA. ${duration<=maxTime*(1-margin/100)?'Cumple el margen operacional configurado.':'Supera el tiempo disponible con el margen configurado.'}`;
+  $('routeDescription').textContent=`A → B calculada sobre una malla local y evaluada con elevaciones del DEM CTX de Jezero (20 m/píxel), controlado a MOLA. ${duration<=maxTime*(1-margin/100)?'Cumple el margen operacional configurado.':'Supera el tiempo disponible con el margen configurado.'}`;
   $('distance').textContent=`${m.distanceKm.toFixed(2)} km`;
   $('duration').textContent=formatHours(duration);
   $('maxSlope').textContent=Number.isFinite(m.maxSlopeDeg)?`${m.maxSlopeDeg.toFixed(1)}°`:'—';
@@ -229,4 +231,4 @@ document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{ const la
 
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');setTimeout(()=>$('toast').classList.add('hide'),4500);}
 
-(async()=>{ try{D=await fetch(DATA_URL).then(r=>r.json());initMap();$('statusText').textContent='MAPA REAL · NASA MARS TREK · MOLA'; }catch(e){showToast('No se pudo cargar la configuración.');console.error(e);} })();
+(async()=>{ try{D=await fetch(DATA_URL).then(r=>r.json());initMap();$('statusText').textContent='MAPA REAL · NASA MARS TREK · DEM CTX / MOLA'; }catch(e){showToast('No se pudo cargar la configuración.');console.error(e);} })();
