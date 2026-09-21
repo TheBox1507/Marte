@@ -139,64 +139,30 @@ body{font-size:14px;background:linear-gradient(135deg,#080706,#100b08 60%,#09080
 @media(max-width:760px){.mapInfo{left:12px;right:12px;top:70px;width:auto}.mapInfoActions{grid-template-columns:1fr}.landingPicker select{font-size:11px;padding:10px}}
 \n\n/* V22 — leyenda contextual sobre el mapa interactivo */\n.mapLegend{position:absolute;right:16px;bottom:16px;z-index:14;width:292px;max-width:calc(100% - 32px);background:rgba(12,9,7,.94);border:1px solid #604332;border-radius:12px;box-shadow:0 16px 32px rgba(0,0,0,.38);backdrop-filter:blur(10px);overflow:hidden;color:#f5ece5}\n.mapLegendHeader{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 10px;border-bottom:1px solid #3a2a22;background:linear-gradient(180deg,#1d1511,#120e0b)}\n.mapLegendHeader strong{display:block;font-size:10px;letter-spacing:1.7px;color:#f1b28f}\n.mapLegendHeader small{display:block;margin-top:2px;font-size:8px;color:#8e7b6f}\n.mapLegendHeader button{width:30px;height:30px;border:1px solid #644432;border-radius:7px;background:#19120f;color:#f2c2a6;font-size:17px;line-height:1;cursor:pointer}\n.mapLegendHeader button:hover{background:#2a1b15;border-color:#996044}\n.mapLegendBody{padding:10px 12px 11px;max-height:min(62vh,520px);overflow:auto}\n.mapLegendBody::-webkit-scrollbar{width:7px}.mapLegendBody::-webkit-scrollbar-track{background:#100c0a}.mapLegendBody::-webkit-scrollbar-thumb{background:#4b362b;border-radius:99px}\n.mapLegend.is-collapsed .mapLegendBody{display:none}\n.mapLegendGroupTitle{font-size:7px;letter-spacing:1.5px;font-weight:900;color:#9a8578;margin:8px 0 6px}\n.mapLegendGroupTitle:first-child{margin-top:0}\n.legendItem{display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;min-height:34px;padding:4px 0}\n.legendItem>b,.legendItem b{display:block;font-size:9px;color:#f4ebe4;line-height:1.2}.legendItem small{display:block;margin-top:2px;font-size:7.5px;line-height:1.25;color:#89776c}\n.legendSymbol{width:22px;height:22px;display:grid;place-items:center;justify-self:center;box-sizing:border-box;font:900 8px Inter,Segoe UI,sans-serif}\n.legendSymbol.landing{border-radius:50%;background:#ed7049;border:2px solid #ffe3cc;box-shadow:0 0 0 3px rgba(237,112,73,.12)}\n.legendSymbol.known{width:16px;height:16px;transform:rotate(45deg);background:#8fc8d4;border:2px solid #fff4e8}\n.legendSymbol.base{border-radius:50%;background:#251812;border:2px solid #6dd1a6;color:#cff8e7;box-shadow:0 0 0 3px rgba(109,209,166,.10)}\n.legendSymbol.required{border-radius:50%;background:#ef7048;border:2px solid #fff0e5;color:#fff}\n.legendSymbol.optional{border-radius:50%;background:#f2bb67;border:2px solid #fff0d0;color:#321d0e}\n.legendLine{width:28px;height:0;justify-self:center;border-top-width:3px;border-top-style:solid;border-radius:99px}\n.legendLine.selected{border-top-color:#ff8a58;border-top-width:5px}\n.legendLine.direct{border-top-color:#f0e6d5;border-top-style:dashed}\n.legendLine.balanced{border-top-color:#f0bf68;border-top-style:dashed}\n.legendLine.risk{border-top-color:#63d0a0;border-top-style:dashed}\n.legendGradient{width:28px;height:12px;justify-self:center;border-radius:4px;border:1px solid #5e4b40}\n.legendGradient.slope{background:linear-gradient(90deg,#46c7a9,#b9cf63,#e9753b)}\n.legendGradient.rough{background:linear-gradient(90deg,#31bddb,#bc82d8,#e97945)}\n@media(max-width:760px){.mapLegend{right:10px;bottom:10px;width:260px;max-width:calc(100% - 20px)}.mapLegendBody{max-height:48vh}.legendItem{min-height:31px}.legendItem small{font-size:7px}}\n
 
-/* V25 — modal de coordenadas funcional y visible sobre el mapa */
-.coordinateModal{
-  position:absolute;
-  inset:0;
-  z-index:40;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  background:rgba(5,4,3,.72);
-  backdrop-filter:blur(3px);
+
+/* V26 — coordenadas como formulario inline; sin botón lanzador ni modal */
+.coordinateInline{
+  margin-top:10px;
+  padding:14px;
+  border:1px solid #5f402f;
+  border-radius:12px;
+  background:linear-gradient(145deg,#18110d 0%,#100b08 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 8px 18px rgba(0,0,0,.18);
 }
-.coordinateModal.hide{display:none!important}
-.coordinateDialog{
-  position:relative;
-  width:min(520px, calc(100% - 24px));
-  max-height:min(680px, calc(100% - 32px));
-  overflow:auto;
-  padding:24px;
-  border:1px solid #7a4a37;
-  border-radius:16px;
-  background:linear-gradient(145deg,#1b120e 0%,#0e0b09 100%);
-  box-shadow:0 24px 70px rgba(0,0,0,.62), 0 0 0 1px rgba(255,140,91,.08);
-  color:#f7ede4;
-}
-.coordinateClose{
-  position:absolute;
-  top:12px;
-  right:12px;
-  width:38px;
-  height:38px;
-  border:1px solid #594033;
-  border-radius:9px;
-  background:#17100d;
-  color:#f4dfd3;
-  font-size:24px;
-  line-height:1;
-  cursor:pointer;
-}
-.coordinateClose:hover{border-color:#ef7048;background:#251711;color:#fff}
-.coordinateEyebrow{font-size:9px;letter-spacing:2px;color:#e0a17f;font-weight:800;margin-bottom:7px}
-.coordinateDialog h3{margin:0 44px 8px 0;font-size:20px}
-.coordinateHelp{margin:0 0 18px;color:#a49387;font-size:11px;line-height:1.55}
-.coordinateGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.coordinateDialog label{display:flex;flex-direction:column;gap:7px;color:#d9c9bf;font-size:10px;font-weight:700;letter-spacing:.2px}
-.coordinateDialog input,.coordinateDialog select{
-  width:100%;
-  min-height:44px;
-  padding:10px 12px;
-  border:1px solid #4b382e;
-  border-radius:9px;
-  background:#090807;
-  color:#fff8f2;
-  outline:none;
-}
-.coordinateDialog input:focus,.coordinateDialog select:focus{border-color:#ef7048;box-shadow:0 0 0 3px rgba(239,112,72,.12)}
-.coordinateField{margin-bottom:12px}
-.coordinateError{padding:10px 12px;border:1px solid #914737;background:#321812;color:#ffd2c7;border-radius:8px;font-size:10px;line-height:1.4;margin-top:4px}
-.coordinateActions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
-.coordinateActions button{min-height:46px;padding:11px 18px;border-radius:9px;cursor:pointer;font-weight:800}
-@media(max-width:620px){.coordinateModal{padding:12px}.coordinateDialog{padding:18px;width:100%}.coordinateGrid{grid-template-columns:1fr}.coordinateActions{flex-direction:column}.coordinateActions button{width:100%}}
+.coordinateInlineHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:7px}
+.coordinateInlineEyebrow{font-size:8px;letter-spacing:1.8px;color:#ef9c79;font-weight:900;margin-bottom:3px}
+.coordinateInlineHeader strong{display:block;font-size:12px;color:#f7eee8;line-height:1.25}
+.coordinateInlineBadge{font-size:7px;letter-spacing:1px;font-weight:900;color:#d8c1ad;border:1px solid #6d4b39;border-radius:999px;padding:5px 8px;background:#17100d}
+.coordinateInlineHelp{margin:0 0 12px;color:#96857b;font-size:9px;line-height:1.45}
+.coordinateInline form{display:block}
+.coordinateInlineGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.coordinateInline label{display:flex;flex-direction:column;gap:5px;color:#d6c8be;font-size:9px;font-weight:800}
+.coordinateInlineField{margin-top:9px}
+.coordinateInline input,.coordinateInline select{width:100%;min-height:38px;box-sizing:border-box;padding:8px 10px;border:1px solid #4b372c;border-radius:8px;background:#080706;color:#f8f1eb;outline:none;font-size:10px}
+.coordinateInline input::placeholder{color:#6f625a}
+.coordinateInline input:focus,.coordinateInline select:focus{border-color:#d66d49;box-shadow:0 0 0 2px rgba(214,109,73,.12)}
+.coordinateInlineError{margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid #8f4938;background:#301711;color:#ffd3c7;font-size:9px;line-height:1.35}
+.coordinateInlineSubmit{width:100%;min-height:42px;margin-top:10px;border-radius:9px;border:1px solid #c96c49;background:linear-gradient(135deg,#6a3322,#392016);color:#fff7ef;display:flex;align-items:center;justify-content:center;gap:7px;font-size:10px;font-weight:900;cursor:pointer;box-shadow:0 7px 16px rgba(0,0,0,.2)}
+.coordinateInlineSubmit:hover{border-color:#f19a74;background:linear-gradient(135deg,#84452e,#4b2819);transform:translateY(-1px)}
+.coordinateInlineSubmit:active{transform:translateY(0)}
+@media(max-width:760px){.coordinateInline{padding:12px}.coordinateInlineGrid{grid-template-columns:1fr 1fr}.coordinateInline input,.coordinateInline select{min-height:40px;font-size:10px}}
