@@ -50,7 +50,7 @@
       <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
     </section>
 
-    <button class="dataButton" id="sourcesBtn">FUENTES Y METODOLOGÍA</button>
+    <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
     <p class="sideNote">El índice de riesgo es experimental y topográfico. No certifica la seguridad de una EVA tripulada.</p>
   </aside>
 
@@ -111,7 +111,6 @@
 </main>
 
 <div id="toast" class="toast hide"></div>
-<div id="modal" class="modal hide"><div class="modalBox"><button id="closeModal" class="close">×</button><div class="sectionTitle">FUENTES Y METODOLOGÍA</div><h2>De datos orbitales a una ruta explicable</h2><p>La interfaz utiliza cartografía pública de NASA Mars Trek. El cálculo de ruta solicita elevaciones puntuales al servicio público de MOLA, construye una malla local y busca trayectorias con A*.</p><div class="flow"><span>NASA/USGS</span><b>→</b><span>MOLA / cartografía</span><b>→</b><span>muestreo</span><b>→</b><span>A*</span><b>→</b><span>riesgo topográfico</span></div><div class="sourceList"><a target="_blank" rel="noreferrer" href="https://trek.nasa.gov/mars/">NASA Mars Trek</a><a target="_blank" rel="noreferrer" href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars">NASA Trek Map Services / MOLA</a><a target="_blank" rel="noreferrer" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/">NASA · Where is Perseverance?</a><a target="_blank" rel="noreferrer" href="https://astrogeology.usgs.gov/search/map/Mars/Mars2020/JEZ_hirise_soc_006_DTM_MOLAtopography_DeltaGeoid_1m_Eqc_latTs0_lon0_blend40">USGS/NASA · HiRISE DTM Jezero</a></div><p class="methodNote">El índice de riesgo no es un estándar NASA. Sirve para comparar alternativas dentro de esta aplicación con los parámetros definidos por el usuario.</p></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="script.js"></script>
