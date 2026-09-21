@@ -226,7 +226,12 @@ $('calculate').onclick=calculateRoutes;
 $('clearRoute').onclick=resetSelection;
 $('recalculate').onclick=()=>{ if(currentRoute) renderRoute(currentRoute); };
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{ const layer=el.dataset.layer; if(layer==='mola')molaLayer.setVisible(el.checked); if(layer==='roughness')roughnessLayer.setVisible(el.checked); if(layer==='dust')dustLayer.setVisible(el.checked); if(layer==='route')routeLayer.setVisible(el.checked); if(layer==='points')markerLayer.setVisible(el.checked); });
-$('sourcesBtn').onclick=()=>$('modal').classList.remove('hide');$('closeModal').onclick=()=>$('modal').classList.add('hide');$('modal').onclick=e=>{if(e.target.id==='modal')$('modal').classList.add('hide')};
+const modal = $('modal');
+const closeModal = () => { modal.classList.add('hide'); };
+$('sourcesBtn').addEventListener('click', () => modal.classList.remove('hide'));
+$('closeModal').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeModal(); });
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hide')) closeModal(); });
 
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');setTimeout(()=>$('toast').classList.add('hide'),4500);}
 
