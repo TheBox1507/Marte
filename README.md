@@ -81,3 +81,8 @@ Fuente: https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation
 
 ## Corrección v2
 La malla de cálculo se recorta a la cobertura real del DEM CTX de Jezero para evitar que el padding de la ruta genere puntos fuera del DEM. Los puntos A y B también se validan antes de solicitar elevaciones.
+
+
+## V5 — lógica operacional
+
+La versión V5 incorpora restricciones de velocidad/EVA/margen, tratamiento de puntos obligatorios y opcionales, y costes A* específicos por estrategia. Ver `CHANGELOG-V5.md`.
