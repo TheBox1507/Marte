@@ -486,10 +486,19 @@ function updatePlanningUI(){
 function newMission(){ missionPoints=[];currentMission=null;selecting=true;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI(); }
 function setLanding(){
   const base={lat:LANDING.lat,lon:LANDING.lon,name:'Base: Perseverance',type:'base',required:true,dwellMin:0};
-  if(!missionPoints.length) missionPoints=[base];
-  else missionPoints[0]={...missionPoints[0],...base};
-  selecting=true; drawPointMarkers();renderMissionList();updatePlanningUI();
+  // Perseverance queda automáticamente como P0/base de la misión.
+  // Si ya hay objetivos, se conservan desde el segundo elemento en adelante.
+  missionPoints = missionPoints.length ? [base, ...missionPoints.slice(1)] : [base];
+  currentMission=null;
+  routeLayer.getSource().clear();
+  selecting=true;
+  drawPointMarkers();
+  renderMissionList();
+  resetMetrics();
+  updatePlanningUI();
+  $('statusText').textContent='BASE DE PERSEVERANCE FIJADA · agrega los siguientes puntos en el mapa';
   map.getView().animate({center:[LANDING.lon,LANDING.lat],zoom:6,duration:450});
+  showToast('Perseverance se marcó automáticamente como el punto BASE (P0).');
 }
 function resetMetrics(){ ['distance','duration','maxSlope','gain','avgSlope','segments','riskNumber','legsCount','dwellTotal','missionMargin'].forEach(id=>$(id).textContent='—'); $('routeName').textContent='Esperando misión';$('routeStatus').textContent='SIN RUTA';$('routeStatus').className='pill';$('riskLabel').textContent='Sin evaluación';$('riskBar').style.width='0%';if($('calcParams'))$('calcParams').textContent='—';if($('lastCalculated'))$('lastCalculated').textContent='Último cálculo: —';$('recalculate').disabled=true;$('saveMission').disabled=true;}
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}

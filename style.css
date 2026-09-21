@@ -105,3 +105,14 @@ body{font-size:14px;background:linear-gradient(135deg,#080706,#100b08 60%,#09080
   .wpMeta span{font-size:7px}
   .tag{font-size:6.5px;padding:4px 7px}
 }
+
+
+/* V19 — secuencia sin barras visibles y panel lateral de desplazamiento limpio */
+.sidebar,.details{scrollbar-width:none;-ms-overflow-style:none;}
+.sidebar::-webkit-scrollbar,.details::-webkit-scrollbar{width:0;height:0;display:none;}
+.waypointPanel{width:100%;max-width:100%;overflow:visible!important;}
+.waypointList{width:100%;max-width:100%;max-height:none!important;overflow:visible!important;overflow-x:hidden!important;padding-right:0!important;}
+.waypoint{width:100%;max-width:100%;min-width:0;overflow:visible;}
+.wpMain,.wpMeta,.wpName{min-width:0;max-width:100%;overflow:hidden;}
+.wpActions{min-width:96px;}
+.returnCheck{width:100%;max-width:100%;}
