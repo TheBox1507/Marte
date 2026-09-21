@@ -669,7 +669,6 @@ $('useSelectedLanding')?.addEventListener('click',()=>{
   if(!id){showToast('Selecciona primero un sitio de aterrizaje.');return;}
   const f=landingLayer.getSource().getFeatures().find(x=>x.get('refId')===id); if(f) setBaseFromLanding(f);
 });
-$('setOrigin').onclick=setLanding;
 $('planMode').onclick=newMission;
 $('calculate').onclick=()=>calculateMission();
 $('clearRoute').onclick=clearMission;
@@ -733,5 +732,12 @@ document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{if(
 $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
+
+const toggleMapLegend=$('toggleMapLegend');
+const mapLegend=$('mapLegend');
+toggleMapLegend?.addEventListener('click',()=>{
+  const collapsed=mapLegend?.classList.toggle('is-collapsed');
+  if(toggleMapLegend){ toggleMapLegend.textContent=collapsed?'＋':'−'; toggleMapLegend.setAttribute('aria-expanded',String(!collapsed)); }
+});
 
 (async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();

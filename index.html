@@ -58,7 +58,6 @@
 
     <section>
       <div class="sectionTitle">PLANIFICACIÓN</div>
-      <button class="action" id="setOrigin"><span>◉</span> Usar Perseverance como base rápida</button>
       <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
       <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
       <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
@@ -88,13 +87,6 @@
       <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
     </section>
 
-    <div class="layerLegend">
-      <div class="legendTitle">LECTURA DE CAPAS</div>
-      <div><span class="legendSwatch terrain"></span>Relieve · MOLA + HRSC</div>
-      <div><span class="legendSwatch rough"></span>Análisis · pendiente</div>
-      <div><span class="legendSwatch dust"></span>Análisis · rugosidad</div>
-    </div>
-
     <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
     <p class="sideNote">El índice de riesgo es experimental y topográfico; sirve para comparar alternativas y no certifica la seguridad de una EVA tripulada.</p>
   </aside>
@@ -113,6 +105,35 @@
     <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
     <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · DEM MOLA para análisis</div>
+    <div class="mapLegend" id="mapLegend" aria-label="Leyenda del mapa">
+      <div class="mapLegendHeader">
+        <div>
+          <strong>LEYENDA</strong>
+          <small>Simbología del mapa</small>
+        </div>
+        <button id="toggleMapLegend" type="button" aria-expanded="true" aria-controls="mapLegendBody" title="Mostrar u ocultar leyenda">−</button>
+      </div>
+      <div class="mapLegendBody" id="mapLegendBody">
+        <div class="mapLegendGroupTitle">REFERENCIAS</div>
+        <div class="legendItem"><span class="legendSymbol landing"></span><span><b>Sitio de aterrizaje</b><small>Misiones que aterrizaron en Marte</small></span></div>
+        <div class="legendItem"><span class="legendSymbol known"></span><span><b>Ubicación conocida</b><small>Regiones y accidentes destacados</small></span></div>
+
+        <div class="mapLegendGroupTitle">MISIÓN</div>
+        <div class="legendItem"><span class="legendSymbol base">B</span><span><b>Base</b><small>Punto de inicio o retorno</small></span></div>
+        <div class="legendItem"><span class="legendSymbol required">P</span><span><b>Objetivo obligatorio</b><small>Debe formar parte del recorrido</small></span></div>
+        <div class="legendItem"><span class="legendSymbol optional">P</span><span><b>Objetivo opcional</b><small>Puede omitirse según restricciones</small></span></div>
+
+        <div class="mapLegendGroupTitle">RUTAS</div>
+        <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta seleccionada</b><small>Alternativa actualmente analizada</small></span></div>
+        <div class="legendItem"><span class="legendLine direct"></span><span><b>Más directa</b><small>Prioriza distancia</small></span></div>
+        <div class="legendItem"><span class="legendLine balanced"></span><span><b>Equilibrada</b><small>Distancia + terreno + tiempo</small></span></div>
+        <div class="legendItem"><span class="legendLine risk"></span><span><b>Menor exposición</b><small>Penaliza más la dificultad topográfica</small></span></div>
+
+        <div class="mapLegendGroupTitle">ANÁLISIS</div>
+        <div class="legendItem"><span class="legendGradient slope"></span><span><b>Pendiente calculada</b><small>Menor → mayor inclinación</small></span></div>
+        <div class="legendItem"><span class="legendGradient rough"></span><span><b>Rugosidad calculada</b><small>Menor → mayor variación local</small></span></div>
+      </div>
+    </div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
     <div id="mapInfo" class="mapInfo hide" role="dialog" aria-label="Información de ubicación">
