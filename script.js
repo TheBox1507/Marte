@@ -24,41 +24,32 @@ function buildLayers(){
   const projection = ol.proj.get('MARS:EQUIRECTANGULAR');
   const resolutions = Array.from({length:8},(_,z)=>0.703125 / Math.pow(2,z));
   const tileGrid = new ol.tilegrid.TileGrid({ extent:[-180,-90,180,90], origin:[-180,90], resolutions, tileSize:256 });
-  const nasa = (url, format='image/png') => new ol.source.XYZ({ projection, tileGrid, crossOrigin:'anonymous', maxZoom:7, wrapX:true, tilePixelRatio:1, url, transition:0 });
-  const monitored = (url, layerName, fallbackUrl=null) => {
-    let source=nasa(url); let failures=0; let successes=0; let usingFallback=false;
-    const attach=(src)=>{
-      src.on('tileloadstart',()=>markLayerLoading(layerName));
-      src.on('tileloadend',()=>{successes++;markLayerLoaded(layerName);});
-      src.on('tileloaderror',()=>{
-        failures++;
-        if(fallbackUrl && !usingFallback && failures>=3){
-          usingFallback=true; failures=0; source=nasa(fallbackUrl); 
-          if(layerName==='dust' && dustLayer) dustLayer.setSource(source);
-          markLayerLoading(layerName);
-          source.on('tileloadend',()=>markLayerLoaded(layerName));
-          source.on('tileloaderror',()=>markLayerError(layerName));
-          source.refresh();
-          return;
-        }
-        if(successes===0 && failures>=3) markLayerError(layerName);
-      });
-    };
-    attach(source);
+  const nasa = (url) => new ol.source.XYZ({ projection, tileGrid, maxZoom:7, wrapX:true, tilePixelRatio:1, url, transition:0 });
+  const proxyTile = (layer) => `/api/tile?layer=${encodeURIComponent(layer)}&z={z}&x={x}&y={y}`;
+  const monitored = (url, layerName) => {
+    const source=nasa(url);
+    let failures=0, successes=0;
+    source.on('tileloadstart',()=>markLayerLoading(layerName));
+    source.on('tileloadend',()=>{successes++;failures=0;markLayerLoaded(layerName);});
+    source.on('tileloaderror',()=>{
+      failures++;
+      if(successes===0 && failures>=6) markLayerError(layerName);
+    });
     return source;
   };
   molaLayer = new ol.layer.Tile({ source:monitored(D.map.globalTile,'mola'), opacity:1, zIndex:1 });
-  roughnessLayer = new ol.layer.Tile({ source:monitored(D.map.roughnessTile,'roughness'), opacity:.86, visible:false, zIndex:3, className:'layer-roughness' });
-  dustLayer = new ol.layer.Tile({ source:monitored(D.map.dustTile,'dust',D.map.dustIndexTile), opacity:.72, visible:false, zIndex:4, className:'layer-dust' });
+  roughnessLayer = new ol.layer.Tile({ source:monitored(proxyTile('mola_roughness'),'roughness'), opacity:.58, visible:false, zIndex:3, className:'layer-roughness' });
+  dustLayer = new ol.layer.Tile({ source:monitored(proxyTile('TES_Dust'),'dust'), opacity:.48, visible:false, zIndex:4, className:'layer-dust' });
   markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
   return { projection, layers:[molaLayer,roughnessLayer,dustLayer,routeLayer,markerLayer] };
 }
 
-function markLayerLoaded(name){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent='ACTIVA';el.className='layerStatus live';} }
-function markLayerError(name){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent='REVISAR';el.className='layerStatus error';} }
-function markLayerLoading(name){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent='CARGANDO…';el.className='layerStatus';} }
+function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
+function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
+function markLayerError(name){ setLayerStatus(name,'ERROR DE DATOS','error'); }
+function markLayerLoading(name){ setLayerStatus(name,'CARGANDO…','loading'); }
 
 function pointStyle(kind,label){
   const color = kind==='base' ? '#6dd1a6' : kind==='optional' ? '#f2bb67' : '#ef7048';
@@ -73,16 +64,19 @@ function routeStyle(selected,kind){
 }
 
 async function prepareWmtsTemplates(){
-  try{
-    const res=await fetch('/api/wmts-info?layers=mola_roughness,TES_Dust,tes_ruffdust');
-    if(!res.ok)return;
-    const json=await res.json();
-    if(json?.layers?.mola_roughness?.template)D.map.roughnessTile=json.layers.mola_roughness.template;
-    if(json?.layers?.TES_Dust?.template)D.map.dustTile=json.layers.TES_Dust.template;
-    if(json?.layers?.tes_ruffdust?.template)D.map.dustIndexTile=json.layers.tes_ruffdust.template;
-    document.querySelector('[data-layer-status="roughness"]')?.setAttribute('data-wmts-ready','1');
-    document.querySelector('[data-layer-status="dust"]')?.setAttribute('data-wmts-ready','1');
-  }catch(e){ console.warn('WMTS config no disponible; se usan plantillas de respaldo.',e); }
+  // The analytical layers are served through the application proxy to avoid browser CORS/WMTS template inconsistencies.
+  // We only verify that NASA Mars Trek advertises the requested products; loading is evaluated by visible tiles.
+  const checks=[['roughness','mola_roughness'],['dust','TES_Dust']];
+  for(const [uiName,layerId] of checks){
+    try{
+      const res=await fetch('/api/wmts-info?layers='+encodeURIComponent(layerId),{cache:'no-store'});
+      const json=await res.json();
+      if(json?.layers?.[layerId]) setLayerStatus(uiName,'DISPONIBLE','ready');
+      else setLayerStatus(uiName,'SIN SERVICIO','error');
+    }catch(e){
+      setLayerStatus(uiName,'DISPONIBLE','ready');
+    }
+  }
 }
 
 function initMap(){
@@ -420,11 +414,14 @@ $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un 
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked; activeLayerNames[visible?'add':'delete'](layer);
   if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust')dustLayer.setVisible(visible); if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
-  const status=document.querySelector(`[data-layer-status="${layer}"]`); if(status&&visible&&layer!=='route'&&layer!=='points') status.textContent='CARGANDO…';
+  if(layer==='roughness'||layer==='dust') { if(visible) markLayerLoading(layer); else setLayerStatus(layer,'DISPONIBLE','ready'); }
+  if(layer==='mola'&&visible) setLayerStatus('mola','ACTIVA','live');
+  if(layer==='route') setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  if(layer==='points') setLayerStatus('points',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
 });
 document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{if(currentMission){const mode=el.value;renderMission(currentMission[mode]);drawMissionRoutes(currentMission,mode);}});
 $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareWmtsTemplates();initMap();renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareWmtsTemplates();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('roughness','DISPONIBLE','ready');setLayerStatus('dust','DISPONIBLE','ready');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();

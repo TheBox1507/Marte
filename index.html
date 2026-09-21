@@ -32,12 +32,15 @@
 
     <section class="layersSection">
       <div class="sectionTitle">CAPAS CARTOGRÁFICAS</div>
-      <div class="layerHint">Activa una o varias capas. Las capas científicas se cargan desde los servicios WMTS publicados por NASA Mars Trek.</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span>Relieve MOLA + HRSC</span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span>Rugosidad MOLA</span></span><b class="layerStatus" data-layer-status="roughness">LISTA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="dust"><span>Polvo TES</span></span><b class="layerStatus" data-layer-status="dust">LISTA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span>Rutas calculadas</span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span>Puntos de referencia</span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
+      <div class="layerHint"><strong>VISUALIZACIÓN DE TERRENO</strong><br>Activa las capas científicas para comparar relieve, rugosidad y polvo. Las capas NASA se sirven mediante el backend de Mars Explorer para mantener una carga estable.</div>
+      <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Topografía y sombreado</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+      <div class="layerGroupLabel">ANÁLISIS CIENTÍFICO</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad MOLA</strong><small>Variación de pendientes</small></span></span><b class="layerStatus ready" data-layer-status="roughness">DISPONIBLE</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="dust"><span class="layerCopy"><strong>Polvo TES</strong><small>Distribución global de polvo</small></span></span><b class="layerStatus ready" data-layer-status="dust">DISPONIBLE</b></label>
+      <div class="layerGroupLabel">OPERACIÓN</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramo seleccionado</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de referencia</strong><small>Base y objetivos de misión</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
     </section>
 
     <section>

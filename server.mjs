@@ -189,6 +189,43 @@ async function resolveWmtsTemplate(layerId) {
   return info;
 }
 
+
+const TILE_UPSTREAMS = {
+  mola_roughness: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm', ext: 'png' },
+  TES_Dust: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm', ext: 'png' },
+  tes_ruffdust: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm', ext: 'png' }
+};
+
+async function handleTileProxy(req, res, url) {
+  if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
+  const layer = url.searchParams.get('layer') || '';
+  const z = Number(url.searchParams.get('z'));
+  const x = Number(url.searchParams.get('x'));
+  const y = Number(url.searchParams.get('y'));
+  const cfg = TILE_UPSTREAMS[layer];
+  if (!cfg || !Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y) || z < 0 || z > 10 || x < 0 || y < 100000) {
+    return send(res, 400, { error: 'Parámetros de tile inválidos.' });
+  }
+  const upstream = `${cfg.base}/${z}/${y}/${x}.${cfg.ext}`;
+  try {
+    const r = await fetch(upstream, { headers: { 'User-Agent': 'Mars-Explorer/1.0' } });
+    if (!r.ok) {
+      res.writeHead(r.status, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=300' });
+      return res.end('Tile sin datos en este nivel/área.');
+    }
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.writeHead(200, {
+      'Content-Type': r.headers.get('content-type') || 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+      'X-Mars-Source': upstream,
+      'Access-Control-Allow-Origin': '*'
+    });
+    return res.end(buf);
+  } catch (err) {
+    return send(res, 502, { error: `No se pudo consultar el tile NASA: ${err?.message || err}` });
+  }
+}
+
 async function handleWmtsInfo(req, res, url) {
   if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
   const requested = (url.searchParams.get('layers') || 'mola_roughness,TES_Dust,tes_ruffdust').split(',').map(s => s.trim()).filter(Boolean);
@@ -220,6 +257,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'CTX Jezero 20m / control MOLA', coverage: CTX_BBOX });
     if (url.pathname === '/api/elevations') return handleElevations(req, res);
     if (url.pathname === '/api/wmts-info') return handleWmtsInfo(req, res, url);
+    if (url.pathname === '/api/tile') return handleTileProxy(req, res, url);
     return serveStatic(req, res, url);
   } catch (err) {
     send(res, 500, { error: err.message });
