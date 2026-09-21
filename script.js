@@ -32,8 +32,10 @@ function buildLayers(){
   });
   const monitored = (id, layerName) => {
     const source = nasa(id);
-    source.on('tileloaderror', () => markLayerError(layerName));
-    source.on('tileloadend', () => markLayerLoaded(layerName));
+    let failures=0, successes=0;
+    source.on('tileloadstart', () => markLayerLoading(layerName));
+    source.on('tileloaderror', () => { failures++; if(successes===0 && failures>=6) markLayerError(layerName); });
+    source.on('tileloadend', () => { successes++; markLayerLoaded(layerName); });
     return source;
   };
   molaLayer = new ol.layer.Tile({ source:monitored('globalTile','mola'), opacity:1 });
@@ -51,7 +53,11 @@ function markLayerLoaded(name){
 }
 function markLayerError(name){
   const el = document.querySelector(`[data-layer-status="${name}"]`);
-  if(el){el.textContent='SIN DATOS';el.className='layerStatus error';}
+  if(el){el.textContent='NO DISPONIBLE';el.className='layerStatus error';}
+}
+function markLayerLoading(name){
+  const el=document.querySelector(`[data-layer-status="${name}"]`);
+  if(el){el.textContent='CARGANDO';el.className='layerStatus';}
 }
 
 function pointStyle(kind,label){
