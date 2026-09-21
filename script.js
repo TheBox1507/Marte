@@ -651,6 +651,85 @@ function loadHistory(id){
 function deleteHistory(id){setHistory(getHistory().filter(x=>x.id!==id));renderHistory();}
 
 
+
+function openCoordinateModal(){
+  const modal=$('coordinateModal');
+  if(!modal) return;
+  $('coordinateLatInput').value='';
+  $('coordLonInput').value='';
+  $('coordNameInput').value='';
+  $('coordTypeInput').value='science';
+  $('coordRequiredInput').value='optional';
+  $('coordDwellInput').value='15';
+  $('coordinateError').textContent='';
+  $('coordinateError').classList.add('hide');
+  modal.classList.remove('hide');
+  setTimeout(()=>$('coordLatInput')?.focus(),50);
+}
+function closeCoordinateModal(){ $('coordinateModal')?.classList.add('hide'); }
+function parseCoordinateValue(value){
+  const n=Number(String(value ?? '').trim().replace(',', '.'));
+  return Number.isFinite(n) ? n : NaN;
+}
+function addPointFromCoordinates(){
+  const lat=parseCoordinateValue($('coordLatInput')?.value);
+  const lon=parseCoordinateValue($('coordLonInput')?.value);
+  const nameInput=String($('coordNameInput')?.value||'').trim();
+  const type=$('coordTypeInput')?.value==='base'?'base':'science';
+  const required=$('coordRequiredInput')?.value==='required';
+  const dwellRaw=Number($('coordDwellInput')?.value);
+  const dwellMin=Number.isFinite(dwellRaw)?Math.max(0,Math.min(1440,Math.round(dwellRaw))):15;
+  const err=$('coordinateError');
+  const fail=msg=>{ if(err){err.textContent=msg;err.classList.remove('hide');} showToast(msg); };
+
+  if(!Number.isFinite(lat)||lat < -90 || lat > 90) return fail('La latitud debe estar entre −90° y 90°.');
+  if(!Number.isFinite(lon)||lon < -180 || lon > 180) return fail('La longitud debe estar entre −180° y 180°.');
+
+  const point={
+    lat, lon,
+    name:nameInput || (type==='base'?'Base de misión':`Objetivo ${Math.max(1,missionPoints.length)}`),
+    type,
+    required:type==='base' ? true : required,
+    dwellMin:type==='base' ? 0 : dwellMin
+  };
+
+  if(type==='base'){
+    const others=missionPoints.filter(p=>p.type!=='base');
+    missionPoints=[point,...others];
+    selecting=true;
+    $('statusText').textContent='BASE DE COORDENADAS FIJADA · agrega los siguientes puntos';
+    map.getView().animate({center:[lon,lat],zoom:Math.max(map.getView().getZoom(),3),duration:450});
+    showToast(`${point.name} quedó establecida como BASE (P0).`);
+  }else{
+    missionPoints.push(point);
+    selecting=true;
+    $('statusText').textContent=`PUNTO AÑADIDO · ${point.name}`;
+    map.getView().animate({center:[lon,lat],duration:350});
+    showToast(`${point.name} se añadió a la misión.`);
+  }
+
+  currentMission=null;
+  routeLayer.getSource().clear();
+  drawPointMarkers();
+  renderMissionList();
+  resetMetrics();
+  updatePlanningUI();
+  closeCoordinateModal();
+}
+
+$('addCoordinates')?.addEventListener('click',openCoordinateModal);
+$('coordinateModalClose')?.addEventListener('click',closeCoordinateModal);
+$('coordinateCancel')?.addEventListener('click',closeCoordinateModal);
+$('coordinateAdd')?.addEventListener('click',addPointFromCoordinates);
+$('coordinateModal')?.addEventListener('click',e=>{ if(e.target?.id==='coordinateModal') closeCoordinateModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeCoordinateModal(); });
+['coordLatInput','coordLonInput','coordNameInput','coordDwellInput'].forEach(id=>$(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addPointFromCoordinates();} }));
+$('coordTypeInput')?.addEventListener('change',e=>{
+  const base=e.target.value==='base';
+  if($('coordRequiredInput')) $('coordRequiredInput').value=base?'required':'optional';
+  if($('coordDwellInput')) $('coordDwellInput').value=base?'0':'15';
+});
+
 $('mapInfoClose')?.addEventListener('click',closeReferencePopup);
 $('mapInfoUseBase')?.addEventListener('click',()=>{
   const f=(document.querySelector(`[data-ref-layer]`) ? null : null);
