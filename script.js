@@ -2,6 +2,7 @@ const DATA_URL = 'data/mars-data.json';
 const EARTH = 6371; // km
 const MARTIAN_RADIUS = 3389.5; // km
 const LANDING = { lat: 18.44463, lon: 77.45088, name: 'Lugar de aterrizaje de Perseverance' };
+const CTX_BBOX = { minLon: 76.99, maxLon: 78.58, minLat: 17.58, maxLat: 19.29 };
 
 let D;
 let map, markerLayer, routeLayer, molaLayer, roughnessLayer, dustLayer;
@@ -116,8 +117,11 @@ function pathMetrics(path){
 
 function buildGrid(a,b,rows=13,cols=13){
   const latMin=Math.min(a.lat,b.lat),latMax=Math.max(a.lat,b.lat),lonMin=Math.min(a.lon,b.lon),lonMax=Math.max(a.lon,b.lon);
+  if(a.lat<CTX_BBOX.minLat||a.lat>CTX_BBOX.maxLat||a.lon<CTX_BBOX.minLon||a.lon>CTX_BBOX.maxLon||b.lat<CTX_BBOX.minLat||b.lat>CTX_BBOX.maxLat||b.lon<CTX_BBOX.minLon||b.lon>CTX_BBOX.maxLon){
+    throw new Error(`Los puntos seleccionados deben estar dentro de la cobertura CTX de Jezero: ${CTX_BBOX.minLat}–${CTX_BBOX.maxLat}° N, ${CTX_BBOX.minLon}–${CTX_BBOX.maxLon}° E.`);
+  }
   const latPad=Math.max(0.018,(latMax-latMin)*.55),lonPad=Math.max(0.018,(lonMax-lonMin)*.55);
-  const minLat=latMin-latPad,maxLat=latMax+latPad,minLon=lonMin-lonPad,maxLon=lonMax+lonPad;
+  const minLat=Math.max(CTX_BBOX.minLat,latMin-latPad),maxLat=Math.min(CTX_BBOX.maxLat,latMax+latPad),minLon=Math.max(CTX_BBOX.minLon,lonMin-lonPad),maxLon=Math.min(CTX_BBOX.maxLon,lonMax+lonPad);
   const nodes=[];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) nodes.push({r,c,lat:minLat+(maxLat-minLat)*(r/(rows-1)),lon:minLon+(maxLon-minLon)*(c/(cols-1))});
   return {nodes,rows,cols};

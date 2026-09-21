@@ -57,7 +57,7 @@ async function sampleElevations(points) {
 
   for (const p of valid) {
     if (p.lon < CTX_BBOX.minLon || p.lon > CTX_BBOX.maxLon || p.lat < CTX_BBOX.minLat || p.lat > CTX_BBOX.maxLat) {
-      throw new Error(`El punto ${p.i + 1} está fuera de la cobertura del DEM CTX de Jezero (${CTX_BBOX.minLat}–${CTX_BBOX.maxLat}° N, ${CTX_BBOX.minLon}–${CTX_BBOX.maxLon}° E).`);
+      throw new Error(`El punto ${p.i + 1} (${p.lat.toFixed(5)}° N, ${p.lon.toFixed(5)}° E) está fuera de la cobertura del DEM CTX de Jezero (${CTX_BBOX.minLat}–${CTX_BBOX.maxLat}° N, ${CTX_BBOX.minLon}–${CTX_BBOX.maxLon}° E).`);
     }
   }
   if (!valid.length) throw new Error('No hay coordenadas válidas.');
