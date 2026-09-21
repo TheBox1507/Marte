@@ -2,20 +2,21 @@
   "app": {
     "name": "Mars Explorer",
     "language": "es",
-    "region": "Jezero Crater",
+    "region": "Marte Global",
     "mode": "research-planning",
-    "disclaimer": "Índice experimental de riesgo topográfico; no constituye certificación de seguridad para una misión tripulada."
+    "disclaimer": "Índice experimental de riesgo topográfico; no constituye certificación de seguridad para una misión tripulada.",
+    "scope": "global"
   },
   "region": {
-    "name": "Cráter Jezero",
-    "lat": 18.44463,
-    "lon": 77.45088,
-    "zoom": 4,
+    "name": "Marte Global",
+    "lat": 0,
+    "lon": 0,
+    "zoom": 1.5,
     "bbox": [
-      77.2,
-      18.18,
-      77.7,
-      18.7
+      -180,
+      -90,
+      180,
+      90
     ]
   },
   "referencePoints": [
@@ -33,31 +34,33 @@
     {
       "name": "NASA Mars Trek",
       "url": "https://trek.nasa.gov/mars/",
-      "use": "Capas cartográficas y análisis geoespacial"
+      "use": "Cartografía global de Marte y capas geoespaciales."
     },
     {
-      "name": "NASA MOLA",
+      "name": "NASA MOLA / USGS Astrogeology",
+      "url": "https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m",
+      "use": "DEM global de elevación MOLA a 463 m/píxel."
+    },
+    {
+      "name": "NASA Mars Express HRSC + MOLA",
       "url": "https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars",
-      "use": "Topografía global / sombreado de elevación"
+      "use": "Relieve global combinado a 200 m/píxel."
     },
     {
-      "name": "USGS/NASA Mars 2020 HiRISE DTM",
-      "url": "https://astrogeology.usgs.gov/search/map/Mars/Mars2020/JEZ_hirise_soc_006_DTM_MOLAtopography_DeltaGeoid_1m_Eqc_latTs0_lon0_blend40",
-      "use": "Modelo de terreno de alta resolución para el área de Perseverance"
+      "name": "NASA MGS/TES Thermal Inertia",
+      "url": "https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars",
+      "use": "Contexto termofísico global del terreno."
     },
     {
       "name": "NASA Perseverance Location Map",
       "url": "https://science.nasa.gov/mission/mars-2020-perseverance/location-map/",
-      "use": "Trayectoria y contexto de Perseverance"
+      "use": "Punto de referencia de Perseverance, no limita la misión a Jezero."
     }
   ],
   "map": {
     "globalTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
-    "roughnessTile": "https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png",
-    "dustTile": "https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png",
-    "maxZoom": 7,
-    "roughnessCapabilities": "https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/WMTSCapabilities.xml",
-    "dustCapabilities": "https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/WMTSCapabilities.xml",
-    "dustIndexTile": "https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png"
+    "molaDemTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MGS_MOLA_ClrShade_merge_global_463m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
+    "thermalTile": "/api/tile?layer=thermal&z={z}&y={y}&x={x}",
+    "maxZoom": 11
   }
 }

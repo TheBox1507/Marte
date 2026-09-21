@@ -1,11 +1,11 @@
 const DATA_URL = 'mars-data.json';
 const MARTIAN_RADIUS = 3389.5;
-const LANDING = { lat: 18.44463, lon: 77.45088, name: 'Base / aterrizaje de Perseverance', type: 'base', required: true, dwellMin: 0 };
-const CTX_BBOX = { minLon: 76.99, maxLon: 78.58, minLat: 17.58, maxLat: 19.29 };
+const LANDING = { lat: 18.44463, lon: 77.45088, name: 'Lugar de referencia: Perseverance', type: 'reference', required: false, dwellMin: 0 };
+const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
 const HISTORY_KEY = 'mars-explorer-mission-history-v2';
 
 let D;
-let map, markerLayer, routeLayer, molaLayer, roughnessLayer, dustLayer;
+let map, markerLayer, routeLayer, molaLayer, molaDemLayer, thermalLayer;
 let missionPoints = [];
 let selecting = false;
 let currentMission = null;
@@ -23,68 +23,40 @@ function marsProjection(){
 function buildLayers(){
   const projection = ol.proj.get('MARS:EQUIRECTANGULAR');
   const globalExtent = [-180,-90,180,90];
-
-  // Capas analíticas estables de referencia, distribuidas por Mars Global Data Sets / ASU
-  // a partir de productos MOLA y MGS/TES de NASA. Son archivos raster globales
-  // en proyección cilíndrica simple (equivalente equirectangular para este visor).
-  const ANALYTICAL = {
-    roughness: 'https://www.mars.asu.edu/data/mola_roughness/mola_roughness.png',
-    dust: 'https://www.mars.asu.edu/data/tes_ruffdust/large/tes_ruffdust.png'
-  };
-
-  const staticRaster = (url, layerName, opacity) => {
-    const source = new ol.source.ImageStatic({
-      url,
-      imageExtent: globalExtent,
-      projection,
-      crossOrigin: undefined,
-      interpolate: true,
-      imageLoadFunction(image, src){ image.getImage().src = src; }
-    });
-    source.on('imageloadstart',()=>markLayerLoading(layerName));
-    source.on('imageloadend',()=>markLayerLoaded(layerName));
-    source.on('imageloaderror',()=>markLayerError(layerName));
-    return new ol.layer.Image({ source, opacity, visible:false, zIndex:3 });
-  };
-
-  molaLayer = new ol.layer.Tile({
-    source:new ol.source.XYZ({
-      projection,
-      tileGrid:new ol.tilegrid.TileGrid({
-        extent:globalExtent,
-        origin:[-180,90],
-        resolutions:Array.from({length:8},(_,z)=>0.703125/Math.pow(2,z)),
-        tileSize:256
-      }),
-      maxZoom:7,
-      wrapX:true,
-      crossOrigin:'anonymous',
-      url:D.map.globalTile,
-      transition:0
-    }),
-    opacity:1,
-    zIndex:1
+  const resolutions = Array.from({length:12},(_,z)=>0.703125/Math.pow(2,z));
+  const tileGrid = new ol.tilegrid.TileGrid({extent:globalExtent,origin:[-180,90],resolutions,tileSize:256});
+  const xyz = (url,maxZoom=11) => new ol.layer.Tile({
+    source:new ol.source.XYZ({projection,tileGrid,maxZoom,wrapX:true,crossOrigin:'anonymous',url,transition:0}),
+    opacity:1,zIndex:1
   });
 
-  roughnessLayer = staticRaster(ANALYTICAL.roughness,'roughness',0.88);
-  roughnessLayer.set('layerId','mola_roughness_global');
-
-  dustLayer = staticRaster(ANALYTICAL.dust,'dust',0.82);
-  dustLayer.set('layerId','tes_dust_cover_index');
-  dustLayer.setZIndex(4);
+  molaLayer = xyz(D.map.globalTile, 11);
+  molaLayer.set('layerId','mola-global');
+  molaDemLayer = xyz(D.map.molaDemTile, 11);
+  molaDemLayer.set('layerId','mola-dem');
+  molaDemLayer.setOpacity(.28);
+  molaDemLayer.setVisible(false);
+  thermalLayer = xyz('/api/tile?layer=thermal&z={z}&y={y}&x={x}', 11);
+  thermalLayer.set('layerId','themis-thermal');
+  thermalLayer.setOpacity(.65);
+  thermalLayer.setVisible(false);
+  const ts=thermalLayer.getSource();
+  ts.on('tileloadstart',()=>markLayerLoading('thermal'));
+  ts.on('tileloadend',()=>markLayerLoaded('thermal'));
+  ts.on('tileloaderror',()=>{ if(map?.getView()?.getZoom()>=2) markLayerError('thermal'); });
 
   markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
-  return { projection, layers:[molaLayer,roughnessLayer,dustLayer,routeLayer,markerLayer] };
+  return { projection, layers:[molaLayer,molaDemLayer,thermalLayer,routeLayer,markerLayer] };
 }
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
-function markLayerError(name){ setLayerStatus(name,'ERROR DE DATOS','error'); }
+function markLayerError(name){ setLayerStatus(name,'SIN COBERTURA','error'); }
 function markLayerLoading(name){ setLayerStatus(name,'CARGANDO…','loading'); }
 
 function pointStyle(kind,label){
-  const color = kind==='base' ? '#6dd1a6' : kind==='optional' ? '#f2bb67' : '#ef7048';
+  const color = kind==='base' ? '#6dd1a6' : kind==='reference' ? '#9bb7d4' : kind==='optional' ? '#f2bb67' : '#ef7048';
   return new ol.style.Style({
     image:new ol.style.Circle({ radius:9, fill:new ol.style.Fill({color}), stroke:new ol.style.Stroke({color:'#fff7ed',width:2}) }),
     text:new ol.style.Text({ text:label||'P', offsetY:-19, fill:new ol.style.Fill({color:'#fff'}), stroke:new ol.style.Stroke({color:'#101010',width:4}), font:'800 11px Inter,Segoe UI,sans-serif' })
@@ -96,38 +68,37 @@ function routeStyle(selected,kind){
 }
 
 async function prepareWmtsTemplates(){
-  // Las capas analíticas se cargan como rasters globales de un solo archivo.
-  // Los productos provienen de Mars Global Data Sets / ASU a partir de MOLA y MGS/TES de NASA.
-  setLayerStatus('roughness','DISPONIBLE','ready');
-  setLayerStatus('dust','DISPONIBLE','ready');
+  setLayerStatus('mola','ACTIVA','live');
+  setLayerStatus('molaDem','LISTA','ready');
+  setLayerStatus('thermal','LISTA','ready');
 }
 
 function initMap(){
   const projection = marsProjection();
   ol.proj.addProjection(projection);
   const layers = buildLayers().layers;
-  map = new ol.Map({ target:'map', layers, view:new ol.View({ projection, center:[LANDING.lon, LANDING.lat], zoom:4, resolutions:Array.from({length:8},(_,z)=>0.703125/Math.pow(2,z)) }), controls:[] });
-  map.getView().fit([77.25,18.27,77.62,18.62],{size:map.getSize(),duration:0,padding:[78,22,45,22],maxZoom:5});
+  map = new ol.Map({ target:'map', layers, view:new ol.View({ projection, center:[0,0], zoom:1.5, resolutions:Array.from({length:12},(_,z)=>0.703125/Math.pow(2,z)) }), controls:[] });
   map.on('pointermove', evt=>{ const c=evt.coordinate; if(c) $('coordReadout').textContent=`LAT ${c[1].toFixed(5)}° · LON ${c[0].toFixed(5)}°`; });
   map.on('singleclick', onMapClick);
-  $('zoomIn').onclick=()=>map.getView().setZoom(Math.min(7,map.getView().getZoom()+.7));
-  $('zoomOut').onclick=()=>map.getView().setZoom(Math.max(1,map.getView().getZoom()-.7));
-  $('center').onclick=()=>centerLanding();
-  centerLanding();
+  $('zoomIn').onclick=()=>map.getView().setZoom(Math.min(11,map.getView().getZoom()+.7));
+  $('zoomOut').onclick=()=>map.getView().setZoom(Math.max(0,map.getView().getZoom()-.7));
+  $('center').onclick=()=>centerGlobal();
+  centerGlobal();
   drawPointMarkers();
 }
-function centerLanding(){ map.getView().animate({center:[LANDING.lon,LANDING.lat],zoom:5,duration:350}); }
-function inCtx(p){ return p.lon>=CTX_BBOX.minLon&&p.lon<=CTX_BBOX.maxLon&&p.lat>=CTX_BBOX.minLat&&p.lat<=CTX_BBOX.maxLat; }
+function centerGlobal(){ map.getView().animate({center:[0,0],zoom:1.5,duration:350}); }
+function normalizeLon(lon){ let x=((lon+180)%360+360)%360-180; return Math.abs(x)===180?180:x; }
+function clampLat(lat){ return clamp(lat,-89.5,89.5); }
 
 function onMapClick(evt){
   if(!selecting) return;
   const [lon,lat]=evt.coordinate;
   if(!Number.isFinite(lon)||!Number.isFinite(lat)) return;
   const index=missionPoints.length;
+  const safeLon=normalizeLon(lon); const safeLat=clampLat(lat);
   const point = index===0
-    ? {lat,lon,name:'Base de misión',type:'base',required:true,dwellMin:0}
-    : {lat,lon,name:`Objetivo ${index}`,type:'science',required:true,dwellMin:15};
-  if(!inCtx(point)){ showToast('Selecciona el punto dentro de la cobertura CTX de Jezero.'); return; }
+    ? {lat:safeLat,lon:safeLon,name:'Base de misión',type:'base',required:true,dwellMin:0}
+    : {lat:safeLat,lon:safeLon,name:`Objetivo ${index}`,type:'science',required:true,dwellMin:15};
   missionPoints.push(point);
   currentMission=null;
   drawPointMarkers(); renderMissionList(); updatePlanningUI();
@@ -136,7 +107,7 @@ function drawPointMarkers(){
   if(!markerLayer) return;
   const source=markerLayer.getSource(); source.clear();
   missionPoints.forEach((p,i)=>source.addFeature(new ol.Feature({geometry:new ol.geom.Point([p.lon,p.lat]),kind:p.type==='base'?'base':p.required?'science':'optional',label:p.type==='base'?'B':String(i)})));
-  if(!missionPoints.length) source.addFeature(new ol.Feature({geometry:new ol.geom.Point([LANDING.lon,LANDING.lat]),kind:'base',label:'B'}));
+  if(!missionPoints.length) source.addFeature(new ol.Feature({geometry:new ol.geom.Point([LANDING.lon,LANDING.lat]),kind:'reference',label:'P'}));
 }
 
 function haversine(a,b){
@@ -200,12 +171,19 @@ function aStar(grid,start,goal,mode,params){
 }
 const key=n=>`${n.r}:${n.c}`;
 function forceEndpoints(path,a,b){ if(!path||path.length<2)return path; return [{...a,elevationM:a.elevationM},...path.slice(1,-1),{...b,elevationM:b.elevationM}]; }
-function buildGrid(a,b,rows=15,cols=15){
-  if(!inCtx(a)||!inCtx(b)) throw new Error('Todos los puntos de la misión deben estar dentro de la cobertura CTX de Jezero.');
-  const latMin=Math.min(a.lat,b.lat),latMax=Math.max(a.lat,b.lat),lonMin=Math.min(a.lon,b.lon),lonMax=Math.max(a.lon,b.lon);
-  const latPad=Math.max(0.010,(latMax-latMin)*.38),lonPad=Math.max(0.010,(lonMax-lonMin)*.38);
-  const minLat=Math.max(CTX_BBOX.minLat,latMin-latPad),maxLat=Math.min(CTX_BBOX.maxLat,latMax+latPad),minLon=Math.max(CTX_BBOX.minLon,lonMin-lonPad),maxLon=Math.min(CTX_BBOX.maxLon,lonMax+lonPad);
-  const nodes=[]; for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) nodes.push({r,c,lat:minLat+(maxLat-minLat)*(r/(rows-1)),lon:minLon+(maxLon-minLon)*(c/(cols-1))});
+function shortestLonDelta(a,b){ return ((b-a+540)%360)-180; }
+function interpolateLon(a,b,t){ return normalizeLon(a + shortestLonDelta(a,b)*t); }
+function buildGrid(a,b,rows=17,cols=17){
+  const latMin=clamp(Math.min(a.lat,b.lat)-Math.max(.08,Math.abs(b.lat-a.lat)*.35),-89.5,89.5);
+  const latMax=clamp(Math.max(a.lat,b.lat)+Math.max(.08,Math.abs(b.lat-a.lat)*.35),-89.5,89.5);
+  const nodes=[];
+  for(let r=0;r<rows;r++){
+    const lat=latMin+(latMax-latMin)*(r/(rows-1));
+    for(let c=0;c<cols;c++){
+      const t=c/(cols-1);
+      nodes.push({r,c,lat,lon:interpolateLon(a.lon,b.lon,t)});
+    }
+  }
   return {nodes,rows,cols};
 }
 async function getElevations(points){
@@ -216,8 +194,15 @@ async function getElevations(points){
   return json.points;
 }
 
+function gridSizeForDistanceKm(distanceKm){
+  if(distanceKm>5000) return 11;
+  if(distanceKm>2500) return 13;
+  if(distanceKm>800) return 15;
+  return 17;
+}
 async function calculateLeg(a,b,mode,params){
-  const grid=buildGrid(a,b,15,15);
+  const gridSize=gridSizeForDistanceKm(haversine(a,b));
+  const grid=buildGrid(a,b,gridSize,gridSize);
   const samples=grid.nodes.map(n=>({lat:n.lat,lon:n.lon}));
   samples.push({lat:a.lat,lon:a.lon},{lat:b.lat,lon:b.lon});
   const elevated=await getElevations(samples);
@@ -396,9 +381,11 @@ function updatePlanningUI(){
 }
 function newMission(){ missionPoints=[];currentMission=null;selecting=true;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI(); }
 function setLanding(){
-  if(!missionPoints.length) missionPoints=[{...LANDING}];
-  else { missionPoints[0]={...missionPoints[0],...LANDING,name:'Base de misión / aterrizaje',type:'base',required:true,dwellMin:0}; }
-  selecting=true; drawPointMarkers();renderMissionList();updatePlanningUI();centerLanding();
+  const base={lat:LANDING.lat,lon:LANDING.lon,name:'Base: Perseverance',type:'base',required:true,dwellMin:0};
+  if(!missionPoints.length) missionPoints=[base];
+  else missionPoints[0]={...missionPoints[0],...base};
+  selecting=true; drawPointMarkers();renderMissionList();updatePlanningUI();
+  map.getView().animate({center:[LANDING.lon,LANDING.lat],zoom:6,duration:450});
 }
 function resetMetrics(){ ['distance','duration','maxSlope','gain','avgSlope','segments','riskNumber','legsCount','dwellTotal','missionMargin'].forEach(id=>$(id).textContent='—'); $('routeName').textContent='Esperando misión';$('routeStatus').textContent='SIN RUTA';$('routeStatus').className='pill';$('riskLabel').textContent='Sin evaluación';$('riskBar').style.width='0%';if($('calcParams'))$('calcParams').textContent='—';if($('lastCalculated'))$('lastCalculated').textContent='Último cálculo: —';$('recalculate').disabled=true;$('saveMission').disabled=true;}
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}
@@ -423,7 +410,7 @@ function loadHistory(id){
   const item=getHistory().find(x=>x.id===id); if(!item)return;
   missionPoints=item.points.map(p=>({...p})); $('returnBase').checked=item.returnBase!==false; $('speed').value=item.speed ?? 1.2; $('evaTime').value=item.evaTime ?? 8; $('returnMargin').value=item.returnMargin ?? 25;
   const radio=document.querySelector(`input[name="mode"][value="${item.mode}"]`);if(radio)radio.checked=true;
-  currentMission=null;selecting=false;drawPointMarkers();renderMissionList();updatePlanningUI();centerLanding();showToast('Misión cargada con sus parámetros originales. Pulsa “Calcular misión” o “Recalcular” para obtener el nuevo resultado.');
+  currentMission=null;selecting=false;drawPointMarkers();renderMissionList();updatePlanningUI();centerGlobal();showToast('Misión cargada con sus parámetros originales. Pulsa “Calcular misión” o “Recalcular” para obtener el nuevo resultado.');
 }
 function deleteHistory(id){setHistory(getHistory().filter(x=>x.id!==id));renderHistory();}
 
@@ -436,9 +423,13 @@ $('saveMission').onclick=()=>{if(currentMission){saveHistoryEntry(document.query
 $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked; activeLayerNames[visible?'add':'delete'](layer);
-  if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust')dustLayer.setVisible(visible); if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
-  if(layer==='roughness'||layer==='dust') { if(visible) markLayerLoading(layer); else setLayerStatus(layer,'DISPONIBLE','ready'); }
-  if(layer==='mola'&&visible) setLayerStatus('mola','ACTIVA','live');
+  if(layer==='mola')molaLayer.setVisible(visible);
+  if(layer==='molaDem')molaDemLayer.setVisible(visible);
+  if(layer==='thermal') { thermalLayer.setVisible(visible); if(visible) markLayerLoading('thermal'); else setLayerStatus('thermal','LISTA','ready'); }
+  if(layer==='route')routeLayer.setVisible(visible);
+  if(layer==='points')markerLayer.setVisible(visible);
+  if(layer==='mola') setLayerStatus('mola',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  if(layer==='molaDem') setLayerStatus('molaDem',visible?'ACTIVA':'LISTA',visible?'live':'ready');
   if(layer==='route') setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
   if(layer==='points') setLayerStatus('points',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
 });
@@ -447,4 +438,4 @@ $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareWmtsTemplates();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('roughness','DISPONIBLE','ready');setLayerStatus('dust','DISPONIBLE','ready');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareWmtsTemplates();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('molaDem','LISTA','ready');setLayerStatus('thermal','LISTA','ready');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();

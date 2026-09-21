@@ -8,12 +8,12 @@ import { fromUrl } from 'geotiff';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8000);
 
-// Public, published USGS Astrogeology dataset for Jezero crater.
-// 20 m/pixel CTX DEM, vertically localized to MOLA.
-const CTX_DEM_URL = 'https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif';
-const CTX_BBOX = { minLon: 76.99, maxLon: 78.58, minLat: 17.58, maxLat: 19.29 };
-const DEM_WIDTH = 192;
-const DEM_HEIGHT = 192;
+// Global MOLA DEM, public domain, published by USGS Astrogeology.
+// 463 m/pixel, global coverage (-180..180, -90..90).
+const MOLA_DEM_URL = 'https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif';
+const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
+const DEM_WIDTH = 256;
+const DEM_HEIGHT = 256;
 let demPromise = null;
 const sampleCache = new Map();
 
@@ -34,7 +34,7 @@ function cacheKey(p) { return `${Number(p.lat).toFixed(5)},${Number(p.lon).toFix
 async function loadDem() {
   if (!demPromise) {
     demPromise = (async () => {
-      const tiff = await fromUrl(CTX_DEM_URL);
+      const tiff = await fromUrl(MOLA_DEM_URL);
       const image = await tiff.getImage();
       return image;
     })().catch(err => {
@@ -45,19 +45,13 @@ async function loadDem() {
   return demPromise;
 }
 
-function pixelFromLonLat(lon, lat, width, height) {
-  const x = (lon - CTX_BBOX.minLon) / (CTX_BBOX.maxLon - CTX_BBOX.minLon) * (width - 1);
-  const y = (CTX_BBOX.maxLat - lat) / (CTX_BBOX.maxLat - CTX_BBOX.minLat) * (height - 1);
-  return { x, y };
-}
-
 async function sampleElevations(points) {
   const valid = points.map((p, i) => ({ i, lat: Number(p.lat), lon: Number(p.lon) }))
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
 
   for (const p of valid) {
-    if (p.lon < CTX_BBOX.minLon || p.lon > CTX_BBOX.maxLon || p.lat < CTX_BBOX.minLat || p.lat > CTX_BBOX.maxLat) {
-      throw new Error(`El punto ${p.i + 1} (${p.lat.toFixed(5)}° N, ${p.lon.toFixed(5)}° E) está fuera de la cobertura del DEM CTX de Jezero (${CTX_BBOX.minLat}–${CTX_BBOX.maxLat}° N, ${CTX_BBOX.minLon}–${CTX_BBOX.maxLon}° E).`);
+    if (p.lat < -90 || p.lat > 90 || p.lon < -180 || p.lon > 180) {
+      throw new Error(`Coordenada fuera del rango planetario: ${p.lat.toFixed(5)}°, ${p.lon.toFixed(5)}°.`);
     }
   }
   if (!valid.length) throw new Error('No hay coordenadas válidas.');
@@ -76,7 +70,7 @@ async function sampleElevations(points) {
   const rasterHeight = image.getHeight();
 
   // Get the exact published image bounds when the GeoTIFF exposes them.
-  let bbox = CTX_BBOX;
+  let bbox = GLOBAL_BBOX;
   try {
     const b = image.getBoundingBox();
     if (Array.isArray(b) && b.length === 4 && b.every(Number.isFinite)) {
@@ -136,23 +130,20 @@ async function handleElevations(req, res) {
   try {
     const out = await sampleElevations(points);
     const missing = out.filter(p => !Number.isFinite(p.elevationM)).length;
-    if (missing === out.length) return send(res, 502, { error: 'El DEM CTX no devolvió valores de elevación.' });
+    if (missing === out.length) return send(res, 502, { error: 'El DEM global MOLA no devolvió valores de elevación.' });
     return send(res, 200, {
-      source: 'USGS Astrogeology / Mars 2020 Science Investigation CTX DEM Mosaic',
-      resolutionM: 20,
-      control: 'MOLA',
-      coverage: CTX_BBOX,
+      source: 'NASA MOLA / USGS Astrogeology Mars MGS MOLA DEM',
+      resolutionM: 463,
+      coverage: GLOBAL_BBOX,
       points: out
     });
   } catch (err) {
-    return send(res, 502, { error: `No se pudo consultar el DEM de Jezero: ${err?.message || err}` });
+    return send(res, 502, { error: `No se pudo consultar el DEM global de MOLA: ${err?.message || err}` });
   }
 }
 
 const WMTS_LAYERS = {
-  mola_roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/WMTSCapabilities.xml',
-  TES_Dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/WMTSCapabilities.xml',
-  tes_ruffdust: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/WMTSCapabilities.xml'
+  thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/WMTSCapabilities.xml'
 };
 const wmtsCache = new Map();
 
@@ -179,11 +170,7 @@ async function resolveWmtsTemplate(layerId) {
       return info;
     }
   } catch (_) {}
-  const fallbackTemplates = {
-    mola_roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png',
-    TES_Dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png',
-    tes_ruffdust: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png'
-  };
+  const fallbackTemplates = { thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/default/default028mm/{z}/{y}/{x}.png' };
   const info = fallbackTemplates[layerId] ? { template: fallbackTemplates[layerId], source: 'NASA Mars Trek REST template (fallback)' } : null;
   if (info) wmtsCache.set(layerId, info);
   return info;
@@ -191,22 +178,20 @@ async function resolveWmtsTemplate(layerId) {
 
 
 const TILE_UPSTREAMS = {
-  mola_roughness: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm', ext: 'png' },
-  TES_Dust: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm', ext: 'png' },
-  tes_ruffdust: { base: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm', ext: 'png' }
+  thermal: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Thermal_Inertia/1.0.0/default/default028mm/{z}/{y}/{x}.png'
 };
-
 async function handleTileProxy(req, res, url) {
   if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
   const layer = url.searchParams.get('layer') || '';
   const z = Number(url.searchParams.get('z'));
   const x = Number(url.searchParams.get('x'));
   const y = Number(url.searchParams.get('y'));
-  const cfg = TILE_UPSTREAMS[layer];
-  if (!cfg || !Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y) || z < 0 || z > 10 || x < 0 || y < 100000) {
+  if (!TILE_UPSTREAMS[layer] || !Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y) || z < 0 || z > 11 || x < 0 || y < 100000) {
     return send(res, 400, { error: 'Parámetros de tile inválidos.' });
   }
-  const upstream = `${cfg.base}/${z}/${y}/${x}.${cfg.ext}`;
+  const templateInfo = await resolveWmtsTemplate(layer);
+  const template = templateInfo?.template || TILE_UPSTREAMS[layer];
+  const upstream = template.replaceAll('{z}',String(z)).replaceAll('{x}',String(x)).replaceAll('{y}',String(y));
   try {
     const r = await fetch(upstream, { headers: { 'User-Agent': 'Mars-Explorer/1.0' } });
     if (!r.ok) {
@@ -228,7 +213,7 @@ async function handleTileProxy(req, res, url) {
 
 async function handleWmtsInfo(req, res, url) {
   if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
-  const requested = (url.searchParams.get('layers') || 'mola_roughness,TES_Dust,tes_ruffdust').split(',').map(s => s.trim()).filter(Boolean);
+  const requested = (url.searchParams.get('layers') || 'thermal').split(',').map(s => s.trim()).filter(Boolean);
   const entries = await Promise.all(requested.map(async id => [id, await resolveWmtsTemplate(id)]));
   return send(res, 200, { layers: Object.fromEntries(entries) });
 }
@@ -254,7 +239,7 @@ async function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'CTX Jezero 20m / control MOLA', coverage: CTX_BBOX });
+    if (url.pathname === '/api/health') return send(res, 200, { ok: true, dem: 'MOLA global 463m / USGS Astrogeology', coverage: GLOBAL_BBOX });
     if (url.pathname === '/api/elevations') return handleElevations(req, res);
     if (url.pathname === '/api/wmts-info') return handleWmtsInfo(req, res, url);
     if (url.pathname === '/api/tile') return handleTileProxy(req, res, url);

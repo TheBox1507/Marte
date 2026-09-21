@@ -1,92 +1,47 @@
-# MARS EXPLORER — versión final del prototipo
+# Mars Explorer — Planificador global de travesías científicas
 
-Aplicación web en español para planificar travesías científicas sobre Marte, con foco inicial en el cráter Jezero. La aplicación sustituye el mapa dibujado del prototipo por una cartografía geoespacial real de NASA Mars Trek y calcula alternativas de ruta a partir de elevaciones públicas de MOLA.
+Aplicación web en español para planificar travesías científicas sobre la superficie completa de Marte. La interfaz utiliza cartografía planetaria de NASA Mars Trek y un modelo global de elevación MOLA para calcular alternativas de ruta con A*.
 
-## Qué cambió
+## Alcance de V11
 
-- Se eliminó el mapa simulado con CSS y los valores de demostración.
-- El mapa usa la proyección equirectangular de Marte y capas WMTS/XYZ de NASA Mars Trek.
-- Se añadieron capas de relieve MOLA/HRSC, rugosidad MOLA y polvo TES.
-- Se incorporó selección A → B directamente sobre el mapa.
-- Se implementó una malla local y búsqueda A* con tres criterios: directa, equilibrada y menor exposición.
-- Las elevaciones de la malla se consultan al servicio público de MOLA mediante el backend local para evitar depender de CORS del navegador.
-- El riesgo se expresa como un índice experimental basado en pendiente máxima y desnivel acumulado.
-- La duración se recalcula con velocidad nominal, tiempo máximo de EVA y margen de retorno.
-- La interfaz y las explicaciones están en español.
-- Se incorporó trazabilidad de las fuentes de NASA/USGS y una advertencia explícita: el índice no es una certificación de seguridad para una misión tripulada.
+- Cobertura planetaria completa: -90° a 90° de latitud y -180° a 180° de longitud.
+- Mapa base global MOLA + Mars Express HRSC a 200 m/píxel mediante NASA Mars Trek.
+- Capa opcional de relieve MOLA global a 463 m/píxel.
+- Capa opcional de inercia térmica TES global mediante NASA Mars Trek.
+- Selección de base y múltiples objetivos en cualquier punto del planeta.
+- Misiones multi-punto con objetivos obligatorios y opcionales, desvíos y regreso a base.
+- Tres estrategias: más directa, equilibrada y menor exposición.
+- Cálculo A* por tramo sobre el DEM global MOLA de 463 m/píxel.
+- Distancia, duración, pendiente, desnivel, riesgo topográfico y margen operacional.
+- Historial de misiones almacenado localmente en el navegador.
 
-## Ejecutar localmente
+## Datos y limitaciones
 
-Requiere Node.js 18 o superior.
+El DEM global MOLA de 463 m/píxel es un producto público de NASA/USGS basado en más de 600 millones de mediciones y cubre todo Marte. El archivo GeoTIFF global publicado por USGS tiene aproximadamente 2 GB; el servidor usa lectura parcial/remota para consultar solamente las ventanas necesarias para cada cálculo.
+
+La resolución de 463 m/píxel es apropiada para planificación experimental a escala planetaria, pero no equivale a una evaluación de seguridad de una EVA. En una misión real se necesitarían productos locales de mayor resolución, análisis de obstáculos, incertidumbre, navegación, comunicaciones y otras restricciones operacionales.
+
+Las capas de alta resolución orbital (CTX/HiRISE) no se consideran cobertura global continua: aparecen como productos regionales o mosaicos concretos. La V11 prioriza un mapa global coherente y deja la incorporación de detalle local como una ampliación posterior cuando exista cobertura para la zona seleccionada.
+
+## Fuentes principales
+
+- NASA Mars Trek: https://trek.nasa.gov/mars/
+- NASA Mars Trek API / WMTS: https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars
+- USGS Astrogeology — Mars MGS MOLA DEM 463m: https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m
+- NASA Perseverance Location Map: https://science.nasa.gov/mission/mars-2020-perseverance/location-map/
+
+## Ejecución
 
 ```bash
+npm install
 npm start
 ```
 
-Después abrir:
+Abrir `http://localhost:8000`.
 
-```text
-http://localhost:8000
-```
+En Render:
 
-## Publicar en Netlify
-
-Esta versión incluye una función serverless en `netlify/functions/elevations.mjs`, por lo que ya no depende de `server.mjs` para el servicio de elevación. La carpeta raíz del proyecto está preparada para desplegarse directamente en Netlify.
-
-- Publicar el contenido de esta carpeta como sitio.
-- Netlify detectará `netlify.toml`.
-- No hace falta ejecutar `npm start` en Netlify.
-- El frontend consulta `/.netlify/functions/elevations`, que funciona como proxy hacia el servicio público de MOLA.
-
-La aplicación necesita conexión a Internet para cargar las capas de NASA Mars Trek y consultar el servicio público de MOLA.
-
-## Flujo de uso
-
-1. Pulsa **Usar lugar de aterrizaje** para fijar A en las coordenadas de aterrizaje de Perseverance.
-2. Pulsa **Seleccionar A → B en el mapa**.
-3. Haz clic en el destino.
-4. Pulsa **Calcular rutas**.
-5. Cambia entre **Equilibrada**, **Menor exposición** y **Más directa**.
-6. Ajusta velocidad, tiempo máximo de EVA y margen de retorno y recalcula.
-
-## Datos y fuentes
-
-- NASA Mars Trek: capas cartográficas de Marte y herramientas de análisis.
-- NASA MOLA: modelo de elevación global utilizado para el muestreo automático de la aplicación.
-- NASA/USGS HiRISE DTM de Jezero: producto de alta resolución de referencia para una futura versión que use la topografía local a escala métrica.
-- NASA Perseverance Location Map / Mars 2020 PDS: contexto y productos cartográficos de la misión.
-
-## Limitaciones científicas importantes
-
-La versión actual usa MOLA para el cálculo automático de rutas. Aunque la aplicación enlaza el HiRISE DTM de Jezero como fuente de mayor resolución, todavía no convierte ese GeoTIFF de alta resolución en una malla de navegación dentro del navegador.
-
-Por eso, el **índice de riesgo** debe interpretarse como una herramienta experimental para comparar trayectorias, no como aprobación de una caminata humana. Para una versión de investigación más avanzada conviene incorporar el DTM HiRISE/CTX local, clasificación de obstáculos, incertidumbre del terreno y restricciones operacionales de la misión.
-
-## Archivos principales
-
-- `index.html`: interfaz.
-- `style.css`: diseño.
-- `script.js`: mapa, selección y algoritmo A*.
-- `server.mjs`: servidor local y proxy de muestreo MOLA.
-- `data/mars-data.json`: configuración y fuentes.
-- `package.json`: arranque del servidor.
-
-
-## Elevación usada por el motor de rutas (versión Render)
-
-El cálculo de rutas dentro de Jezero utiliza el **Mars 2020 Science Investigation CTX DEM Mosaic**, un DEM de 20 m/píxel publicado por el USGS Astrogeology Science Center. El producto cubre el cráter Jezero y fue localizado verticalmente al conjunto MOLA. El servidor lee el GeoTIFF remoto y muestrea los valores necesarios para la malla A*.
-
-Fuente: https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic
-
-
-## Corrección v2
-La malla de cálculo se recorta a la cobertura real del DEM CTX de Jezero para evitar que el padding de la ruta genere puntos fuera del DEM. Los puntos A y B también se validan antes de solicitar elevaciones.
-
-
-## V5 — lógica operacional
-
-La versión V5 incorpora restricciones de velocidad/EVA/margen, tratamiento de puntos obligatorios y opcionales, y costes A* específicos por estrategia. Ver `CHANGELOG-V5.md`.
-
-
-### Capas analíticas V10
-Se reemplazaron las capas WMTS problemáticas de rugosidad/polvo por rasters globales de un solo archivo publicados en Mars Global Data Sets (ASU), basados en MOLA y MGS/TES de NASA. La capa de rutas continúa usando el DEM de Jezero para el cálculo de la misión.
+- Runtime: Node
+- Root Directory: vacío
+- Build Command: `npm install`
+- Start Command: `npm start`

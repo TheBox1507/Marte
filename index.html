@@ -15,7 +15,7 @@
 <header class="topbar">
   <div class="brand">
     <img class="brandLogo" src="assets/mars-2020-logo.png" alt="Mars 2020">
-    <div class="brandText"><b>MARS EXPLORER</b><small>PLANIFICADOR DE TRAVESÍAS CIENTÍFICAS</small><em>JEZERO · MISIONES CIENTÍFICAS · NASA / USGS</em></div>
+    <div class="brandText"><b>MARS EXPLORER</b><small>PLANIFICADOR DE TRAVESÍAS CIENTÍFICAS</small><em>MARTE GLOBAL · MISIONES CIENTÍFICAS · NASA / USGS</em></div>
   </div>
   <div class="topMeta"><span class="liveDot"></span><span id="statusText">DATOS CARTOGRÁFICOS · NASA / USGS</span></div>
 </header>
@@ -23,21 +23,21 @@
 <main class="appShell">
   <aside class="sidebar">
     <section>
-      <div class="sectionTitle">MISIÓN ACTIVA / REGIÓN</div>
+      <div class="sectionTitle">MISIÓN / COBERTURA</div>
       <div class="missionCard">
-        <div class="missionBadge">M20</div>
-        <div><strong>Mars 2020</strong><small>Perseverance · Jezero</small></div>
+        <div class="missionBadge">MAR</div>
+        <div><strong>MARTE GLOBAL</strong><small>Cobertura planetaria · NASA / USGS</small></div>
       </div>
     </section>
 
     <section class="layersSection">
       <div class="sectionTitle">CAPAS CARTOGRÁFICAS</div>
-      <div class="layerHint"><strong>VISUALIZACIÓN DE TERRENO</strong><br>Activa una o varias capas para comparar relieve, rugosidad y polvo. Las capas analíticas utilizan productos raster globales de MOLA y MGS/TES de NASA, distribuidos por Mars Global Data Sets / ASU.</div>
+      <div class="layerHint"><strong>VISUALIZACIÓN DE TERRENO</strong><br>Activa las capas globales disponibles para comparar relieve, elevación y propiedades termofísicas de la superficie marciana.</div>
       <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Topografía y sombreado</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
-      <div class="layerGroupLabel">ANÁLISIS CIENTÍFICO</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad MOLA global</strong><small>Basada en MOLA · 7,5 km</small></span></span><b class="layerStatus ready" data-layer-status="roughness">DISPONIBLE</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="dust"><span class="layerCopy"><strong>Índice de polvo TES</strong><small>MGS/TES · 3,5 km</small></span></span><b class="layerStatus ready" data-layer-status="dust">DISPONIBLE</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Relieve global · 200 m/píxel</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="molaDem"><span class="layerCopy"><strong>Relieve MOLA 463 m</strong><small>DEM global de elevación</small></span></span><b class="layerStatus ready" data-layer-status="molaDem">LISTA</b></label>
+      <div class="layerGroupLabel">ANÁLISIS CIENTÍFICO GLOBAL</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="thermal"><span class="layerCopy"><strong>Inercia térmica THEMIS/TES</strong><small>Propiedades termofísicas globales</small></span></span><b class="layerStatus ready" data-layer-status="thermal">LISTA</b></label>
       <div class="layerGroupLabel">OPERACIÓN</div>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramo seleccionado</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de referencia</strong><small>Base y objetivos de misión</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
@@ -45,7 +45,7 @@
 
     <section>
       <div class="sectionTitle">PLANIFICACIÓN</div>
-      <button class="action" id="setOrigin"><span>◉</span> Usar lugar de aterrizaje como base</button>
+      <button class="action" id="setOrigin"><span>◉</span> Usar Perseverance como punto base</button>
       <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
       <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
       <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
@@ -78,8 +78,8 @@
     <div class="layerLegend">
       <div class="legendTitle">LECTURA DE CAPAS</div>
       <div><span class="legendSwatch terrain"></span>Relieve · altimetría / sombreado</div>
-      <div><span class="legendSwatch rough"></span>Rugosidad MOLA · 7,5 km</div>
-      <div><span class="legendSwatch dust"></span>Polvo TES · 3,5 km</div>
+      <div><span class="legendSwatch rough"></span>MOLA 463 m · elevación</div>
+      <div><span class="legendSwatch dust"></span>THEMIS/TES · propiedades termofísicas</div>
     </div>
 
     <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
@@ -89,17 +89,17 @@
   <section class="mapPanel">
     <div class="mapToolbar">
       <div>
-        <strong>CRÁTER JEZERO</strong>
-        <small>18.44463° N · 77.45088° E · Marte</small>
+        <strong>MARTE GLOBAL</strong>
+        <small>−90° a 90° · −180° a 180° · cobertura planetaria</small>
       </div>
       <div class="mapActions">
         <button id="zoomIn">＋</button><button id="zoomOut">−</button><button id="center">⌖ Centro</button>
       </div>
     </div>
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
-    <div class="mapOverlay topLeft"><span id="selectionHint">Selecciona el origen y el destino sobre el mapa</span></div>
+    <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
-    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · CTX DEM</div>
+    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · MOLA DEM GLOBAL</div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
   </section>
@@ -121,12 +121,12 @@
 
     <section class="card riskCard">
       <div class="sectionTitle">ÍNDICE DE RIESGO TOPOGRÁFICO</div>
-      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM CTX de Jezero (20 m/píxel), controlado verticalmente a MOLA.</small></div></div>
+      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MOLA (463 m/píxel). El índice es experimental y está pensado para planificación a escala planetaria.</small></div></div>
       <div class="riskBar"><i id="riskBar"></i></div>
       <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
       <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
       <div class="row"><span>Margen operacional restante</span><b id="missionMargin">—</b></div>
-      <div class="row"><span>Fuente del relieve</span><b>CTX 20 m · MOLA</b></div>
+      <div class="row"><span>Fuente del relieve</span><b>MOLA global · 463 m</b></div>
     </section>
 
     <section class="card">
@@ -139,8 +139,8 @@
 
     <section class="card">
       <div class="sectionTitle">REFERENCIA CIENTÍFICA</div>
-      <div class="reference"><b>Lugar de aterrizaje de Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Coordenadas publicadas por NASA para el aterrizaje del rover Mars 2020.</small></div>
-      <div class="reference"><b>CTX DEM de Jezero</b><span>20 m/píxel · USGS Astrogeology</span><small>DEM publicado para Jezero y localizado verticalmente al marco MOLA. Se utiliza para el cálculo automático de la ruta.</small></div>
+      <div class="reference"><b>Punto de referencia Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Referencia opcional; la misión puede comenzar y terminar en cualquier coordenada de Marte.</small></div>
+      <div class="reference"><b>DEM global MOLA</b><span>463 m/píxel · USGS Astrogeology</span><small>Modelo digital de elevación global de Marte usado por el motor de rutas a escala planetaria.</small></div>
     </section>
   </aside>
 </main>
