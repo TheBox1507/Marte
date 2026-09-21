@@ -32,15 +32,24 @@
 
     <section class="layersSection">
       <div class="sectionTitle">CAPAS CARTOGRÁFICAS</div>
-      <div class="layerHint"><strong>VISUALIZACIÓN DE TERRENO</strong><br>Activa las capas globales disponibles para comparar relieve, elevación y propiedades termofísicas de la superficie marciana.</div>
+      <div class="layerHint"><strong>VISUALIZACIÓN DE TERRENO</strong><br>La base cartográfica muestra el relieve global. El DEM MOLA de 463 m se utiliza internamente para el análisis de rutas y no se duplica como capa visual.</div>
       <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Relieve global · 200 m/píxel</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="molaDem"><span class="layerCopy"><strong>Relieve MOLA 463 m</strong><small>DEM global de elevación</small></span></span><b class="layerStatus ready" data-layer-status="molaDem">LISTA</b></label>
-      <div class="layerGroupLabel">ANÁLISIS CIENTÍFICO GLOBAL</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="thermal"><span class="layerCopy"><strong>Inercia térmica THEMIS/TES</strong><small>Propiedades termofísicas globales</small></span></span><b class="layerStatus ready" data-layer-status="thermal">LISTA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base cartográfica global · 200 m/píxel</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+
+      <div class="layerGroupLabel">CIENCIA · IMAGEN TÉRMICA</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="themisDay"><span class="layerCopy"><strong>THEMIS IR · Día</strong><small>Mosaico infrarrojo global · 100 m/píxel · 60°S–60°N</small></span></span><b class="layerStatus ready" data-layer-status="themisDay">DISPONIBLE</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="themisNight"><span class="layerCopy"><strong>THEMIS IR · Noche</strong><small>Mosaico infrarrojo nocturno · 100 m/píxel · 60°S–60°N</small></span></span><b class="layerStatus ready" data-layer-status="themisNight">DISPONIBLE</b></label>
+
+      <div class="layerGroupLabel">ANÁLISIS DEL TERRENO</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global MOLA · escala de análisis</small></span></span><b class="layerStatus ready" data-layer-status="slope">LISTA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación · derivada de MOLA</small></span></span><b class="layerStatus ready" data-layer-status="roughness">LISTA</b></label>
+
+      <div class="layerGroupLabel">REFERENCIA CARTOGRÁFICA</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="nomenclature"><span class="layerCopy"><strong>Nomenclatura IAU / USGS</strong><small>Nombres oficiales de regiones y accidentes</small></span></span><b class="layerStatus ready" data-layer-status="nomenclature">DISPONIBLE</b></label>
+
       <div class="layerGroupLabel">OPERACIÓN</div>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramo seleccionado</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de referencia</strong><small>Base y objetivos de misión</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base, objetivos y desvíos planificados</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
     </section>
 
     <section>
@@ -77,9 +86,9 @@
 
     <div class="layerLegend">
       <div class="legendTitle">LECTURA DE CAPAS</div>
-      <div><span class="legendSwatch terrain"></span>Relieve · altimetría / sombreado</div>
-      <div><span class="legendSwatch rough"></span>MOLA 463 m · elevación</div>
-      <div><span class="legendSwatch dust"></span>THEMIS/TES · propiedades termofísicas</div>
+      <div><span class="legendSwatch terrain"></span>Relieve · MOLA + HRSC</div>
+      <div><span class="legendSwatch rough"></span>THEMIS · imagen infrarroja</div>
+      <div><span class="legendSwatch dust"></span>Análisis · pendiente / rugosidad</div>
     </div>
 
     <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
@@ -99,7 +108,7 @@
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
     <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
-    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · MOLA DEM GLOBAL</div>
+    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · análisis MOLA interno</div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
   </section>
@@ -121,7 +130,7 @@
 
     <section class="card riskCard">
       <div class="sectionTitle">ÍNDICE DE RIESGO TOPOGRÁFICO</div>
-      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MOLA (463 m/píxel). El índice es experimental y está pensado para planificación a escala planetaria.</small></div></div>
+      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MOLA (463 m/píxel). La pendiente y rugosidad visuales son capas derivadas para análisis; el índice de riesgo es experimental.</small></div></div>
       <div class="riskBar"><i id="riskBar"></i></div>
       <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
       <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
@@ -138,9 +147,9 @@
     </section>
 
     <section class="card">
-      <div class="sectionTitle">REFERENCIA CIENTÍFICA</div>
+      <div class="sectionTitle">FUENTES Y MODELO DE TERRENO</div>
       <div class="reference"><b>Punto de referencia Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Referencia opcional; la misión puede comenzar y terminar en cualquier coordenada de Marte.</small></div>
-      <div class="reference"><b>DEM global MOLA</b><span>463 m/píxel · USGS Astrogeology</span><small>Modelo digital de elevación global de Marte usado por el motor de rutas a escala planetaria.</small></div>
+      <div class="reference"><b>DEM global MOLA · fuente de cálculo</b><span>463 m/píxel · USGS Astrogeology</span><small>Fuente numérica interna para elevación, pendiente, desnivel y evaluación topográfica. No se muestra como una segunda capa para evitar redundancia.</small></div>
     </section>
   </aside>
 </main>

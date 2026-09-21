@@ -34,33 +34,37 @@
     {
       "name": "NASA Mars Trek",
       "url": "https://trek.nasa.gov/mars/",
-      "use": "Cartografía global de Marte y capas geoespaciales."
+      "use": "Cartografía global de Marte y servicios de capas geoespaciales."
     },
     {
       "name": "NASA MOLA / USGS Astrogeology",
       "url": "https://astrogeology.usgs.gov/search/map/mars_mgs_mola_dem_463m",
-      "use": "DEM global de elevación MOLA a 463 m/píxel."
+      "use": "DEM global de elevación MOLA a 463 m/píxel, usado internamente para análisis topográfico y rutas."
     },
     {
       "name": "NASA Mars Express HRSC + MOLA",
       "url": "https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars",
-      "use": "Relieve global combinado a 200 m/píxel."
+      "use": "Base cartográfica global combinada MOLA/HRSC a 200 m/píxel."
     },
     {
-      "name": "NASA MGS/TES Thermal Inertia",
-      "url": "https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars",
-      "use": "Contexto termofísico global del terreno."
+      "name": "THEMIS Day IR / USGS Astrogeology",
+      "url": "https://astrogeology.usgs.gov/search/map/mars_odyssey_themis_ir_day_global_mosaic_100m_v12",
+      "use": "Mosaico infrarrojo diurno a ~100 m/píxel para ±60° de latitud."
     },
     {
-      "name": "NASA Perseverance Location Map",
-      "url": "https://science.nasa.gov/mission/mars-2020-perseverance/location-map/",
-      "use": "Punto de referencia de Perseverance, no limita la misión a Jezero."
+      "name": "THEMIS Night IR / USGS Astrogeology",
+      "url": "https://astrogeology.usgs.gov/search/map/mars_odyssey_themis_ir_night_60n60s_mosaic_100m_v14",
+      "use": "Mosaico infrarrojo nocturno a ~100 m/píxel para ±60° de latitud."
+    },
+    {
+      "name": "USGS Astrogeology WMS",
+      "url": "https://astrowebmaps.wr.usgs.gov/",
+      "use": "Servicios WMS de cartografía y nomenclatura de Marte."
     }
   ],
   "map": {
     "globalTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
-    "molaDemTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MGS_MOLA_ClrShade_merge_global_463m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
-    "thermalTile": "/api/tile?layer=thermal&z={z}&y={y}&x={x}",
-    "maxZoom": 11
+    "maxZoom": 12,
+    "projection": "EPSG:4326"
   }
 }

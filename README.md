@@ -45,3 +45,8 @@ En Render:
 - Root Directory: vacío
 - Build Command: `npm install`
 - Start Command: `npm start`
+
+
+## V13 — arquitectura global de capas
+
+La interfaz separa base cartográfica, ciencia, análisis del terreno, referencia y operación. Para evitar redundancia, el DEM global MOLA de 463 m se usa como fuente numérica interna del motor y no como una segunda capa visual. Las capas científicas visuales se apoyan en mosaicos THEMIS IR de 100 m/píxel de USGS para ±60° de latitud; la pendiente y la rugosidad se derivan dinámicamente del DEM MOLA.
