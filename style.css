@@ -116,3 +116,24 @@ body{font-size:14px;background:linear-gradient(135deg,#080706,#100b08 60%,#09080
 .wpMain,.wpMeta,.wpName{min-width:0;max-width:100%;overflow:hidden;}
 .wpActions{min-width:96px;}
 .returnCheck{width:100%;max-width:100%;}
+
+
+/* V20 — referencias globales y sitios de aterrizaje */
+.landingPicker{margin-top:12px;padding:12px;border:1px solid #3b2b22;border-radius:10px;background:#100c0a}
+.landingPicker label{display:block;font-size:9px;font-weight:800;letter-spacing:.5px;color:#d9c3b6;margin-bottom:7px}
+.landingPicker select{width:100%;background:#090c10;border:1px solid #3d474f;color:#eee8df;border-radius:7px;padding:9px 10px;font-size:10px;outline:none}
+.landingPicker select:focus{border-color:#d56d4a;box-shadow:0 0 0 2px #d56d4a22}
+.referenceAction{margin-top:8px!important;min-height:44px!important;font-size:10px!important;background:linear-gradient(135deg,#3b281c,#241711)!important;border-color:#a15d3f!important}
+.mapInfo{position:absolute;z-index:25;right:16px;top:78px;width:min(330px,calc(100% - 32px));padding:15px 15px 14px;background:linear-gradient(145deg,#1a130f,#0d0b09);border:1px solid #7a4a35;border-radius:12px;box-shadow:0 18px 45px #000b;color:#f4eee7}
+.mapInfoClose{position:absolute;top:8px;right:8px;width:30px;height:30px;border:1px solid #4f3b30;background:#17110e;color:#e8d5c7;border-radius:7px;font-size:18px;cursor:pointer}
+.mapInfoKind{font-size:8px;letter-spacing:1.5px;color:#ed9b7c;font-weight:850;padding-right:32px}
+.mapInfo h3{font-size:17px;margin:4px 0 5px;color:#fff8f0}
+.mapInfoMeta{font-size:9px;color:#caa991;line-height:1.4}
+.mapInfoCoords{font-size:9px;color:#e6bd7d;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:8px}
+.mapInfo p{font-size:9px;line-height:1.55;color:#9e8d82;margin:9px 0}
+.mapInfo a{font-size:9px;color:#93d2d6;text-decoration:none}
+.mapInfoActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}
+.mapInfoActions button{min-height:40px;border-radius:8px;font-size:9px;font-weight:800;cursor:pointer}
+.referencePrimary{background:linear-gradient(135deg,#df6a43,#913522);border:1px solid #ff9b73;color:#fff6ed}
+.referenceSecondary{background:#17120f;border:1px solid #6c4a39;color:#f0d2c1}
+@media(max-width:760px){.mapInfo{left:12px;right:12px;top:70px;width:auto}.mapInfoActions{grid-template-columns:1fr}.landingPicker select{font-size:11px;padding:10px}}

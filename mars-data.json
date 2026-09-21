@@ -50,11 +50,212 @@
       "name": "Esri / NASA MDEM200M",
       "url": "https://astro.arcgis.com/arcgis/rest/services/OnMars/MDEM200M/ImageServer",
       "use": "Servicio global de elevación utilizado internamente para pendiente, desnivel y rugosidad."
+    },
+    {
+      "name": "NASA NSSDCA · Mars Mileage Guide",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/mars_mileage_guide.html",
+      "use": "Coordenadas de varios sitios y accidentes de referencia marcianos."
+    },
+    {
+      "name": "USGS / IAU Gazetteer of Planetary Nomenclature",
+      "url": "https://www.usgs.gov/tools/gazetteer-planetary-nomenclature",
+      "use": "Nombres oficiales de accidentes topográficos aprobados por la IAU."
     }
   ],
   "map": {
     "globalTile": "https://trek.nasa.gov/tiles/Mars/EQ/Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw/1.0.0/default/default028mm/{z}/{y}/{x}.jpg",
     "maxZoom": 12,
     "projection": "EPSG:4326"
-  }
+  },
+  "landingSites": [
+    {
+      "id": "viking-1",
+      "name": "Viking 1",
+      "mission": "Viking",
+      "type": "NASA",
+      "lat": 22.27,
+      "lon": -47.95,
+      "site": "Chryse Planitia",
+      "date": "20 julio 1976",
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/viking.html",
+      "description": "Primer aterrizaje exitoso de una misión estadounidense en Marte. Sitio en Chryse Planitia."
+    },
+    {
+      "id": "viking-2",
+      "name": "Viking 2",
+      "mission": "Viking",
+      "type": "NASA",
+      "lat": 47.64,
+      "lon": 134.29,
+      "site": "Utopia Planitia",
+      "date": "3 septiembre 1976",
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/viking.html",
+      "description": "Segundo aterrizaje Viking, en Utopia Planitia."
+    },
+    {
+      "id": "pathfinder",
+      "name": "Mars Pathfinder / Sojourner",
+      "mission": "Mars Pathfinder",
+      "type": "NASA",
+      "lat": 19.3,
+      "lon": -33.52,
+      "site": "Ares Vallis",
+      "date": "4 julio 1997",
+      "source": "NASA JPL",
+      "sourceUrl": "https://science.nasa.gov/resource/mars-pathfinder-landing-site/",
+      "description": "Lugar de aterrizaje de Mars Pathfinder; el lander y el rover Sojourner exploraron el entorno local."
+    },
+    {
+      "id": "spirit",
+      "name": "Spirit",
+      "mission": "Mars Exploration Rover",
+      "type": "NASA",
+      "lat": -14.5692,
+      "lon": 175.4729,
+      "site": "Gusev Crater",
+      "date": "4 enero 2004",
+      "source": "NASA PDS",
+      "sourceUrl": "https://pds.nasa.gov/",
+      "description": "Lugar de aterrizaje de Spirit en Gusev Crater."
+    },
+    {
+      "id": "opportunity",
+      "name": "Opportunity",
+      "mission": "Mars Exploration Rover",
+      "type": "NASA",
+      "lat": -1.9462,
+      "lon": -5.5266,
+      "site": "Meridiani Planum",
+      "date": "25 enero 2004",
+      "source": "NASA PDS",
+      "sourceUrl": "https://pds.nasa.gov/",
+      "description": "Lugar de aterrizaje de Opportunity en Meridiani Planum."
+    },
+    {
+      "id": "phoenix",
+      "name": "Phoenix",
+      "mission": "Phoenix",
+      "type": "NASA",
+      "lat": 68.2,
+      "lon": -125.7,
+      "site": "Vastitas Borealis",
+      "date": "25 mayo 2008",
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/mission/phoenix/",
+      "description": "Lugar de aterrizaje de Phoenix en las llanuras del norte de Marte."
+    },
+    {
+      "id": "curiosity",
+      "name": "Curiosity",
+      "mission": "Mars Science Laboratory",
+      "type": "NASA",
+      "lat": -4.59,
+      "lon": 137.44,
+      "site": "Gale Crater",
+      "date": "6 agosto 2012",
+      "source": "NASA Marsoweb",
+      "sourceUrl": "https://marsoweb.nas.nasa.gov/landingsites/msl/topsites/gale_crater/",
+      "description": "Lugar de aterrizaje de Curiosity en Gale Crater."
+    },
+    {
+      "id": "insight",
+      "name": "InSight",
+      "mission": "InSight",
+      "type": "NASA",
+      "lat": 4.502,
+      "lon": 135.623,
+      "site": "Elysium Planitia",
+      "date": "26 noviembre 2018",
+      "source": "NASA / JPL",
+      "sourceUrl": "https://www.jpl.nasa.gov/news/press_kits/insight/landing/mission/landing_site/",
+      "description": "Lugar de aterrizaje de InSight en Elysium Planitia."
+    },
+    {
+      "id": "perseverance",
+      "name": "Perseverance",
+      "mission": "Mars 2020",
+      "type": "NASA",
+      "lat": 18.44463,
+      "lon": 77.45088,
+      "site": "Jezero Crater",
+      "date": "18 febrero 2021",
+      "source": "NASA NTRS",
+      "sourceUrl": "https://ntrs.nasa.gov/citations/20210024644",
+      "description": "Lugar de aterrizaje de Perseverance en Jezero Crater."
+    }
+  ],
+  "knownLocations": [
+    {
+      "id": "olympus-mons",
+      "name": "Olympus Mons",
+      "category": "Volcán",
+      "lat": 18.4,
+      "lon": -133.1,
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/mars_mileage_guide.html",
+      "description": "Gran volcán marciano usado por NASA como referencia geográfica."
+    },
+    {
+      "id": "valles-marineris",
+      "name": "Valles Marineris",
+      "category": "Sistema de cañones",
+      "lat": -4.1,
+      "lon": -35.2,
+      "source": "NASA Mars Landing Sites",
+      "sourceUrl": "https://marsoweb.nas.nasa.gov/landingsites/previous/sites/Valles_Marineris/",
+      "description": "Sistema de cañones gigantes en la región ecuatorial de Marte."
+    },
+    {
+      "id": "gale-crater",
+      "name": "Gale Crater",
+      "category": "Cráter",
+      "lat": -4.49,
+      "lon": 137.42,
+      "source": "NASA Marsoweb",
+      "sourceUrl": "https://marsoweb.nas.nasa.gov/landingsites/msl/topsites/gale_crater/",
+      "description": "Cráter seleccionado como lugar de aterrizaje de Curiosity."
+    },
+    {
+      "id": "jezero-crater",
+      "name": "Jezero Crater",
+      "category": "Cráter / antiguo lago",
+      "lat": 18.44,
+      "lon": 77.45,
+      "source": "NASA JPL",
+      "sourceUrl": "https://www.jpl.nasa.gov/news/press_kits/mars_2020/landing/mission/landing_site/",
+      "description": "Cráter de impacto con evidencias de un antiguo sistema lacustre y delta fluvial; lugar de aterrizaje de Perseverance."
+    },
+    {
+      "id": "hellas-planitia",
+      "name": "Hellas Planitia",
+      "category": "Cuenca de impacto",
+      "lat": -33.95,
+      "lon": 48.5,
+      "source": "NASA JPL / HiRISE",
+      "sourceUrl": "https://www.jpl.nasa.gov/images/pia13097-intra-crater-structure-in-nw-hellas-basin-mars/",
+      "description": "Gran cuenca de impacto del hemisferio sur; el punto corresponde al centro de una observación de referencia en el noroeste de la cuenca."
+    },
+    {
+      "id": "cydonia-face",
+      "name": "Cydonia · Face",
+      "category": "Meseta / formación",
+      "lat": 40.9,
+      "lon": -9.45,
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/mars_mileage_guide.html",
+      "description": "Formación famosa de la región de Cydonia, incluida por NASA como referencia geográfica."
+    },
+    {
+      "id": "inca-city",
+      "name": "Inca City",
+      "category": "Terreno estriado",
+      "lat": -81.8,
+      "lon": -59.1,
+      "source": "NASA NSSDCA",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/mars_mileage_guide.html",
+      "description": "Región de alto interés geomorfológico cerca del polo sur marciano."
+    }
+  ]
 }

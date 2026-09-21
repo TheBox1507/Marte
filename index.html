@@ -41,6 +41,16 @@
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global · análisis local</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación · derivada del DEM</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
 
+
+      <div class="layerGroupLabel">REFERENCIAS MARCIANAS</div>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="known" checked><span class="layerCopy"><strong>Ubicaciones conocidas</strong><small>Accidentes y regiones de referencia</small></span></span><b class="layerStatus live" data-layer-status="known">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="landing" checked><span class="layerCopy"><strong>Sitios de aterrizaje</strong><small>Misiones NASA con aterrizaje en Marte</small></span></span><b class="layerStatus live" data-layer-status="landing">ACTIVA</b></label>
+      <div class="landingPicker">
+        <label for="landingSiteSelect">Usar un aterrizaje como base</label>
+        <select id="landingSiteSelect"><option value="">Selecciona un sitio de aterrizaje…</option></select>
+        <button class="action referenceAction" id="useSelectedLanding"><span>⌂</span> Usar como base</button>
+      </div>
+
       <div class="layerGroupLabel">OPERACIÓN</div>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramos de la misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base, objetivos y desvíos</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
@@ -48,7 +58,7 @@
 
     <section>
       <div class="sectionTitle">PLANIFICACIÓN</div>
-      <button class="action" id="setOrigin"><span>◉</span> Usar Perseverance como punto base</button>
+      <button class="action" id="setOrigin"><span>◉</span> Usar Perseverance como base rápida</button>
       <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
       <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
       <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
@@ -105,6 +115,19 @@
     <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · DEM MOLA para análisis</div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
+    <div id="mapInfo" class="mapInfo hide" role="dialog" aria-label="Información de ubicación">
+      <button id="mapInfoClose" class="mapInfoClose" title="Cerrar">×</button>
+      <div id="mapInfoKind" class="mapInfoKind">UBICACIÓN</div>
+      <h3 id="mapInfoTitle">—</h3>
+      <div id="mapInfoMeta" class="mapInfoMeta">—</div>
+      <div id="mapInfoCoords" class="mapInfoCoords">—</div>
+      <p id="mapInfoDescription">—</p>
+      <a id="mapInfoSource" href="#" target="_blank" rel="noreferrer">Fuente</a>
+      <div class="mapInfoActions">
+        <button id="mapInfoUseBase" class="referencePrimary">Usar como base</button>
+        <button id="mapInfoAdd" class="referenceSecondary">Agregar a misión</button>
+      </div>
+    </div>
   </section>
 
   <aside class="details">

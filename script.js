@@ -5,7 +5,7 @@ const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
 const HISTORY_KEY = 'mars-explorer-mission-history-v2';
 
 let D;
-let map, markerLayer, routeLayer, molaLayer, slopeLayer, roughnessLayer;
+let map, markerLayer, routeLayer, molaLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
 let missionPoints = [];
 let selecting = false;
 let currentMission = null;
@@ -40,6 +40,18 @@ function buildLayers(){
   slopeLayer.set('layerId','slope-derived-mola');
   roughnessLayer.set('layerId','roughness-derived-mola');
 
+  knownLayer = new ol.layer.Vector({
+    source:new ol.source.Vector(),
+    style: feature => knownLocationStyle(feature),
+    zIndex:7
+  });
+  knownLayer.set('layerId','known-locations');
+  landingLayer = new ol.layer.Vector({
+    source:new ol.source.Vector(),
+    style: feature => landingSiteStyle(feature),
+    zIndex:8
+  });
+  landingLayer.set('layerId','landing-sites');
   markerLayer = new ol.layer.Vector({
     source:new ol.source.Vector(),
     style: feature => pointStyle(feature.get('kind'), feature.get('label')),
@@ -48,7 +60,7 @@ function buildLayers(){
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
 
-  return { projection, layers:[molaLayer,slopeLayer,roughnessLayer,routeLayer,markerLayer] };
+  return { projection, layers:[molaLayer,slopeLayer,roughnessLayer,knownLayer,landingLayer,routeLayer,markerLayer] };
 }
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
@@ -75,6 +87,7 @@ function initMap(){
   $('center').onclick=()=>centerGlobal();
   centerGlobal();
   drawPointMarkers();
+  populateReferenceLayers();
 }
 function pointStyle(kind,label){
   const color = kind==='base' ? '#6dd1a6' : kind==='reference' ? '#9bb7d4' : kind==='optional' ? '#f2bb67' : '#ef7048';
@@ -88,11 +101,76 @@ function routeStyle(selected,kind){
   return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:selected?6:2.5, lineDash:selected?undefined:[9,8]}) });
 }
 
+
+function knownLocationStyle(feature){
+  const color = feature.get('category')==='Cráter / antiguo lago' ? '#d6b277' : '#8fc8d4';
+  return new ol.style.Style({
+    image:new ol.style.RegularShape({points:4,radius:8,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:'#fff8ef',width:1.5})}),
+    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-15,fill:new ol.style.Fill({color:'#f5eee5'}),stroke:new ol.style.Stroke({color:'#140f0c',width:3}),font:'800 9px Inter,Segoe UI,sans-serif'})
+  });
+}
+function landingSiteStyle(feature){
+  return new ol.style.Style({
+    image:new ol.style.Circle({radius:7,fill:new ol.style.Fill({color:'#ed7049'}),stroke:new ol.style.Stroke({color:'#ffe3cc',width:2.5})}),
+    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-14,fill:new ol.style.Fill({color:'#fff3e6'}),stroke:new ol.style.Stroke({color:'#140f0c',width:3}),font:'900 9px Inter,Segoe UI,sans-serif'})
+  });
+}
+function populateReferenceLayers(){
+  if(!D) return;
+  const ks=knownLayer.getSource(); ks.clear();
+  (D.knownLocations||[]).forEach(x=>ks.addFeature(new ol.Feature({
+    geometry:new ol.geom.Point([x.lon,x.lat]), refKind:'known', refId:x.id, label:x.name,
+    name:x.name, category:x.category, lat:x.lat, lon:x.lon, description:x.description, source:x.source, sourceUrl:x.sourceUrl
+  })));
+  const ls=landingLayer.getSource(); ls.clear();
+  (D.landingSites||[]).forEach(x=>ls.addFeature(new ol.Feature({
+    geometry:new ol.geom.Point([x.lon,x.lat]), refKind:'landing', refId:x.id, label:x.name,
+    name:x.name, mission:x.mission, lat:x.lat, lon:x.lon, site:x.site, date:x.date, description:x.description, source:x.source, sourceUrl:x.sourceUrl
+  })));
+  const select=$('landingSiteSelect');
+  if(select){ select.innerHTML='<option value="">Selecciona un sitio de aterrizaje…</option>'+(D.landingSites||[]).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} · ${escapeHtml(x.site)}</option>`).join(''); }
+}
+function focusReference(refKind,refId){
+  const layer=refKind==='landing'?landingLayer:knownLayer; const f=layer?.getSource().getFeatures().find(x=>x.get('refId')===refId); if(!f) return;
+  map.getView().animate({center:f.getGeometry().getCoordinates(),zoom:Math.max(map.getView().getZoom(),2.8),duration:450}); showReferencePopup(f);
+}
+function showReferencePopup(feature){
+  const box=$('mapInfo'); if(!box) return;
+  const kind=feature.get('refKind');
+  $('mapInfoKind').textContent=kind==='landing'?'SITIO DE ATERRIZAJE':'UBICACIÓN CONOCIDA';
+  $('mapInfoTitle').textContent=feature.get('name');
+  $('mapInfoMeta').textContent=kind==='landing'?`${feature.get('mission')} · ${feature.get('site')} · ${feature.get('date')}`:`${feature.get('category')} · punto de referencia`;
+  $('mapInfoCoords').textContent=`${Number(feature.get('lat')).toFixed(5)}° · ${Number(feature.get('lon')).toFixed(5)}°`;
+  $('mapInfoDescription').textContent=feature.get('description')||'';
+  $('mapInfoSource').textContent=`Fuente: ${feature.get('source')}`;
+  $('mapInfoSource').href=feature.get('sourceUrl')||'#';
+  $('mapInfoUseBase').style.display=kind==='landing'?'inline-flex':'none';
+  $('mapInfoAdd').style.display=kind==='landing'?'inline-flex':'inline-flex';
+  $('mapInfoAdd').textContent=kind==='landing'?'Agregar este sitio a la misión':'Agregar ubicación a la misión';
+  $('mapInfo').dataset.refKind=kind; $('mapInfo').dataset.refId=feature.get('refId');
+  box.classList.remove('hide');
+}
+function closeReferencePopup(){ $('mapInfo')?.classList.add('hide'); }
+function addReferenceToMission(feature){
+  const point={lat:Number(feature.get('lat')),lon:Number(feature.get('lon')),name:feature.get('name'),type:'science',required:false,dwellMin:15};
+  missionPoints.push(point); currentMission=null; selecting=true; drawPointMarkers();renderMissionList();updatePlanningUI();showToast(`${feature.get('name')} se añadió como objetivo opcional.`);closeReferencePopup();
+}
+function setBaseFromLanding(feature){
+  const base={lat:Number(feature.get('lat')),lon:Number(feature.get('lon')),name:`Base · ${feature.get('name')}`,type:'base',required:true,dwellMin:0,baseSourceId:feature.get('refId')};
+  const others=missionPoints.length && missionPoints[0].type==='base' ? missionPoints.slice(1) : missionPoints.filter(p=>p.type!=='base');
+  missionPoints=[base,...others]; currentMission=null; selecting=true; routeLayer.getSource().clear(); drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();
+  map.getView().animate({center:[base.lon,base.lat],zoom:Math.max(map.getView().getZoom(),3),duration:450});
+  $('statusText').textContent=`BASE FIJADA · ${feature.get('name')} · agrega los siguientes puntos`;
+  showToast(`${feature.get('name')} quedó establecida como BASE (P0).`); closeReferencePopup();
+}
+
 function centerGlobal(){ map.getView().animate({center:[0,0],zoom:1.5,duration:350}); }
 function normalizeLon(lon){ let x=((lon+180)%360+360)%360-180; return Math.abs(x)===180?180:x; }
 function clampLat(lat){ return clamp(lat,-89.5,89.5); }
 
 function onMapClick(evt){
+  const hit=map.forEachFeatureAtPixel(evt.pixel,feature=>feature.get('refKind')?feature:null,{hitTolerance:8});
+  if(hit){ showReferencePopup(hit); return; }
   if(!selecting) return;
   const [lon,lat]=evt.coordinate;
   if(!Number.isFinite(lon)||!Number.isFinite(lat)) return;
@@ -572,6 +650,25 @@ function loadHistory(id){
 }
 function deleteHistory(id){setHistory(getHistory().filter(x=>x.id!==id));renderHistory();}
 
+
+$('mapInfoClose')?.addEventListener('click',closeReferencePopup);
+$('mapInfoUseBase')?.addEventListener('click',()=>{
+  const f=(document.querySelector(`[data-ref-layer]`) ? null : null);
+  const kind=$('mapInfo')?.dataset.refKind, id=$('mapInfo')?.dataset.refId;
+  const layer=kind==='landing'?landingLayer:knownLayer; const feature=layer?.getSource().getFeatures().find(x=>x.get('refId')===id);
+  if(feature && kind==='landing') setBaseFromLanding(feature);
+});
+$('mapInfoAdd')?.addEventListener('click',()=>{
+  const kind=$('mapInfo')?.dataset.refKind, id=$('mapInfo')?.dataset.refId;
+  const layer=kind==='landing'?landingLayer:knownLayer; const feature=layer?.getSource().getFeatures().find(x=>x.get('refId')===id);
+  if(feature) addReferenceToMission(feature);
+});
+$('landingSiteSelect')?.addEventListener('change',e=>{if(e.target.value)focusReference('landing',e.target.value);});
+$('useSelectedLanding')?.addEventListener('click',()=>{
+  const id=$('landingSiteSelect')?.value;
+  if(!id){showToast('Selecciona primero un sitio de aterrizaje.');return;}
+  const f=landingLayer.getSource().getFeatures().find(x=>x.get('refId')===id); if(f) setBaseFromLanding(f);
+});
 $('setOrigin').onclick=setLanding;
 $('planMode').onclick=newMission;
 $('calculate').onclick=()=>calculateMission();
@@ -615,6 +712,14 @@ document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
       refreshDerivedLayers(true);
     } else setLayerStatus('roughness','OCULTA','ready');
   }
+  if(layer==='known'){
+    knownLayer.setVisible(visible);
+    setLayerStatus('known',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  }
+  if(layer==='landing'){
+    landingLayer.setVisible(visible);
+    setLayerStatus('landing',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+  }
   if(layer==='route'){
     routeLayer.setVisible(visible);
     setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
@@ -629,4 +734,4 @@ $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
