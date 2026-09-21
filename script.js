@@ -22,76 +22,61 @@ function marsProjection(){
 
 function buildLayers(){
   const projection = ol.proj.get('MARS:EQUIRECTANGULAR');
-  const resolutions = Array.from({length:8},(_,z)=>0.703125 / Math.pow(2,z));
-  const tileGrid = new ol.tilegrid.TileGrid({ extent:[-180,-90,180,90], origin:[-180,90], resolutions, tileSize:256 });
-  const nasa = (url) => new ol.source.XYZ({
-    projection,
-    tileGrid,
-    maxZoom:7,
-    wrapX:true,
-    crossOrigin:'anonymous',
-    tilePixelRatio:1,
-    url,
-    transition:0
-  });
+  const globalExtent = [-180,-90,180,90];
 
-  // NASA Mars Trek publica estos productos como WMTS RESTful en proyección equirectangular.
-  // La cuadrícula global de Mars Trek usa 2x2^z columnas y 2^z filas.
-  const NASA_WMTS = {
-    roughness: 'https://trek.nasa.gov/tiles/Mars/EQ/mola_roughness/1.0.0/default/default028mm/{z}/{y}/{x}.png',
-    dust: 'https://trek.nasa.gov/tiles/Mars/EQ/TES_Dust/1.0.0/default/default028mm/{z}/{y}/{x}.png',
-    dustIndex: 'https://trek.nasa.gov/tiles/Mars/EQ/tes_ruffdust/1.0.0/default/default028mm/{z}/{y}/{x}.png'
+  // Capas analíticas estables de referencia, distribuidas por Mars Global Data Sets / ASU
+  // a partir de productos MOLA y MGS/TES de NASA. Son archivos raster globales
+  // en proyección cilíndrica simple (equivalente equirectangular para este visor).
+  const ANALYTICAL = {
+    roughness: 'https://www.mars.asu.edu/data/mola_roughness/mola_roughness.png',
+    dust: 'https://www.mars.asu.edu/data/tes_ruffdust/large/tes_ruffdust.png'
   };
 
-  const monitored = (url, layerName, options={}) => {
-    const source=nasa(url);
-    let failures=0, successes=0, timeoutId=null;
-    const finishLoading = () => { if(timeoutId){clearTimeout(timeoutId);timeoutId=null;} };
-    source.on('tileloadstart',()=>{
-      if(successes===0) markLayerLoading(layerName);
-      if(!timeoutId){ timeoutId=setTimeout(()=>{ if(successes===0) markLayerError(layerName); }, 10000); }
+  const staticRaster = (url, layerName, opacity) => {
+    const source = new ol.source.ImageStatic({
+      url,
+      imageExtent: globalExtent,
+      projection,
+      crossOrigin: undefined,
+      interpolate: true,
+      imageLoadFunction(image, src){ image.getImage().src = src; }
     });
-    source.on('tileloadend',()=>{
-      successes++; failures=0; finishLoading(); markLayerLoaded(layerName);
-      if(options.onFirstSuccess) options.onFirstSuccess();
-    });
-    source.on('tileloaderror',()=>{
-      failures++;
-      // Algunos tiles pueden no existir; no convertir un único fallo en "error de datos".
-      if(successes===0 && failures>=10) markLayerError(layerName);
-      if(options.onError) options.onError(failures);
-    });
-    return source;
+    source.on('imageloadstart',()=>markLayerLoading(layerName));
+    source.on('imageloadend',()=>markLayerLoaded(layerName));
+    source.on('imageloaderror',()=>markLayerError(layerName));
+    return new ol.layer.Image({ source, opacity, visible:false, zIndex:3 });
   };
 
-  molaLayer = new ol.layer.Tile({ source:monitored(D.map.globalTile,'mola'), opacity:1, zIndex:1 });
-  roughnessLayer = new ol.layer.Tile({ source:monitored(NASA_WMTS.roughness,'roughness'), opacity:.72, visible:false, zIndex:3, className:'layer-roughness' });
-
-  let dustFallbackActive=false;
-  const dustFallbackSource = monitored(NASA_WMTS.dustIndex,'dustIndex',{onFirstSuccess(){
-    if(dustFallbackActive){ setLayerStatus('dust','ÍNDICE TES','live'); }
-  }});
-  const dustPrimarySource = monitored(NASA_WMTS.dust,'dust',{
-    onFirstSuccess(){
-      dustFallbackActive=false;
-      dustFallbackLayer.setVisible(false);
-    },
-    onError(failures){
-      if(failures>=10 && !dustFallbackActive){
-        dustFallbackActive=true;
-        dustFallbackLayer.set('fallbackActive',true);
-        dustFallbackLayer.setVisible(dustLayer.getVisible());
-        setLayerStatus('dust','RESPALDO TES','live');
-      }
-    }
+  molaLayer = new ol.layer.Tile({
+    source:new ol.source.XYZ({
+      projection,
+      tileGrid:new ol.tilegrid.TileGrid({
+        extent:globalExtent,
+        origin:[-180,90],
+        resolutions:Array.from({length:8},(_,z)=>0.703125/Math.pow(2,z)),
+        tileSize:256
+      }),
+      maxZoom:7,
+      wrapX:true,
+      crossOrigin:'anonymous',
+      url:D.map.globalTile,
+      transition:0
+    }),
+    opacity:1,
+    zIndex:1
   });
-  const dustFallbackLayer = new ol.layer.Tile({ source:dustFallbackSource, opacity:.66, visible:false, zIndex:4, className:'layer-dust-fallback' });
-  dustLayer = new ol.layer.Tile({ source:dustPrimarySource, opacity:.68, visible:false, zIndex:5, className:'layer-dust' });
+
+  roughnessLayer = staticRaster(ANALYTICAL.roughness,'roughness',0.88);
+  roughnessLayer.set('layerId','mola_roughness_global');
+
+  dustLayer = staticRaster(ANALYTICAL.dust,'dust',0.82);
+  dustLayer.set('layerId','tes_dust_cover_index');
+  dustLayer.setZIndex(4);
 
   markerLayer = new ol.layer.Vector({ source:new ol.source.Vector(), style: feature => pointStyle(feature.get('kind'), feature.get('label')), zIndex:10 });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
-  return { projection, layers:[molaLayer,roughnessLayer,dustFallbackLayer,dustLayer,routeLayer,markerLayer] };
+  return { projection, layers:[molaLayer,roughnessLayer,dustLayer,routeLayer,markerLayer] };
 }
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
@@ -111,9 +96,10 @@ function routeStyle(selected,kind){
 }
 
 async function prepareWmtsTemplates(){
-  // Los productos globales se consumen directamente desde los servicios WMTS públicos de NASA Mars Trek.
-  setLayerStatus('roughness','LISTA','ready');
-  setLayerStatus('dust','LISTA','ready');
+  // Las capas analíticas se cargan como rasters globales de un solo archivo.
+  // Los productos provienen de Mars Global Data Sets / ASU a partir de MOLA y MGS/TES de NASA.
+  setLayerStatus('roughness','DISPONIBLE','ready');
+  setLayerStatus('dust','DISPONIBLE','ready');
 }
 
 function initMap(){
@@ -450,7 +436,7 @@ $('saveMission').onclick=()=>{if(currentMission){saveHistoryEntry(document.query
 $('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked; activeLayerNames[visible?'add':'delete'](layer);
-  if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust'){dustLayer.setVisible(visible); const fb=map.getLayers().getArray().find(l=>l.get('className')==='layer-dust-fallback'); if(fb) fb.setVisible(visible && fb.get('fallbackActive')===true);} if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
+  if(layer==='mola')molaLayer.setVisible(visible); if(layer==='roughness')roughnessLayer.setVisible(visible); if(layer==='dust')dustLayer.setVisible(visible); if(layer==='route')routeLayer.setVisible(visible); if(layer==='points')markerLayer.setVisible(visible);
   if(layer==='roughness'||layer==='dust') { if(visible) markLayerLoading(layer); else setLayerStatus(layer,'DISPONIBLE','ready'); }
   if(layer==='mola'&&visible) setLayerStatus('mola','ACTIVA','live');
   if(layer==='route') setLayerStatus('route',visible?'ACTIVA':'OCULTA',visible?'live':'ready');

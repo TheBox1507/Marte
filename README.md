@@ -86,3 +86,7 @@ La malla de cálculo se recorta a la cobertura real del DEM CTX de Jezero para e
 ## V5 — lógica operacional
 
 La versión V5 incorpora restricciones de velocidad/EVA/margen, tratamiento de puntos obligatorios y opcionales, y costes A* específicos por estrategia. Ver `CHANGELOG-V5.md`.
+
+
+### Capas analíticas V10
+Se reemplazaron las capas WMTS problemáticas de rugosidad/polvo por rasters globales de un solo archivo publicados en Mars Global Data Sets (ASU), basados en MOLA y MGS/TES de NASA. La capa de rutas continúa usando el DEM de Jezero para el cálculo de la misión.
