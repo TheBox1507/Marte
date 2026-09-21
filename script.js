@@ -652,7 +652,7 @@ function deleteHistory(id){setHistory(getHistory().filter(x=>x.id!==id));renderH
 
 
 
-function openCoordinateModal(){
+window.openCoordinateModal = function openCoordinateModal(){
   const modal=$('coordinateModal');
   if(!modal) return;
   $('coordinateLatInput').value='';
@@ -666,7 +666,7 @@ function openCoordinateModal(){
   modal.classList.remove('hide');
   setTimeout(()=>$('coordLatInput')?.focus(),50);
 }
-function closeCoordinateModal(){ $('coordinateModal')?.classList.add('hide'); }
+window.closeCoordinateModal = function closeCoordinateModal(){ $('coordinateModal')?.classList.add('hide'); }
 function parseCoordinateValue(value){
   const n=Number(String(value ?? '').trim().replace(',', '.'));
   return Number.isFinite(n) ? n : NaN;
@@ -717,12 +717,12 @@ function addPointFromCoordinates(){
   closeCoordinateModal();
 }
 
-$('addCoordinates')?.addEventListener('click',openCoordinateModal);
-$('coordinateModalClose')?.addEventListener('click',closeCoordinateModal);
-$('coordinateCancel')?.addEventListener('click',closeCoordinateModal);
+const addCoordinatesButton=$('addCoordinates'); if(addCoordinatesButton){ addCoordinatesButton.type='button'; addCoordinatesButton.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();window.openCoordinateModal();}); }
+$('coordinateModalClose')?.addEventListener('click',(e)=>{e.preventDefault();window.closeCoordinateModal();});
+$('coordinateCancel')?.addEventListener('click',(e)=>{e.preventDefault();window.closeCoordinateModal();});
 $('coordinateAdd')?.addEventListener('click',addPointFromCoordinates);
-$('coordinateModal')?.addEventListener('click',e=>{ if(e.target?.id==='coordinateModal') closeCoordinateModal(); });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeCoordinateModal(); });
+$('coordinateModal')?.addEventListener('click',e=>{ if(e.target?.id==='coordinateModal') window.closeCoordinateModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') window.closeCoordinateModal(); });
 ['coordLatInput','coordLonInput','coordNameInput','coordDwellInput'].forEach(id=>$(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addPointFromCoordinates();} }));
 $('coordTypeInput')?.addEventListener('change',e=>{
   const base=e.target.value==='base';
