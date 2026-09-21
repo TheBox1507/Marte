@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mars Explorer — Planificador de travesías científicas</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="marsIcon" aria-hidden="true"></div>
+    <div><b>MARS EXPLORER</b><small>PLANIFICADOR DE TRAVESÍAS CIENTÍFICAS</small></div>
+  </div>
+  <div class="topMeta"><span class="liveDot"></span><span id="statusText">DATOS CARTOGRÁFICOS · NASA / USGS</span></div>
+</header>
+
+<main class="appShell">
+  <aside class="sidebar">
+    <section>
+      <div class="sectionTitle">MISIÓN / REGIÓN</div>
+      <div class="missionCard">
+        <div class="missionBadge">M20</div>
+        <div><strong>Mars 2020</strong><small>Perseverance · Jezero</small></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sectionTitle">CAPAS REALES</div>
+      <label class="check"><input type="checkbox" data-layer="mola" checked><span>Relieve MOLA + HRSC</span></label>
+      <label class="check"><input type="checkbox" data-layer="roughness"><span>Rugosidad MOLA</span></label>
+      <label class="check"><input type="checkbox" data-layer="dust"><span>Polvo TES</span></label>
+      <label class="check"><input type="checkbox" data-layer="route" checked><span>Rutas calculadas</span></label>
+      <label class="check"><input type="checkbox" data-layer="points" checked><span>Puntos de referencia</span></label>
+    </section>
+
+    <section>
+      <div class="sectionTitle">PLANIFICACIÓN</div>
+      <button class="action" id="setOrigin"><span>◉</span> Usar lugar de aterrizaje</button>
+      <button class="action" id="planMode"><span>＋</span> Seleccionar A → B en el mapa</button>
+      <button class="action" id="calculate" disabled><span>⌁</span> Calcular rutas</button>
+      <button class="action ghost" id="clearRoute"><span>×</span> Limpiar selección</button>
+    </section>
+
+    <section class="legendBox">
+      <div class="sectionTitle">MODO DE RUTA</div>
+      <label class="modeOption"><input type="radio" name="mode" value="balanced" checked><span><b>Equilibrada</b><small>Distancia + terreno</small></span></label>
+      <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
+      <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
+    </section>
+
+    <button class="dataButton" id="sourcesBtn">FUENTES Y METODOLOGÍA</button>
+    <p class="sideNote">El índice de riesgo es experimental y topográfico. No certifica la seguridad de una EVA tripulada.</p>
+  </aside>
+
+  <section class="mapPanel">
+    <div class="mapToolbar">
+      <div>
+        <strong>CRÁTER JEZERO</strong>
+        <small>18.44463° N · 77.45088° E · Marte</small>
+      </div>
+      <div class="mapActions">
+        <button id="zoomIn">＋</button><button id="zoomOut">−</button><button id="center">⌖ Centro</button>
+      </div>
+    </div>
+    <div id="map" aria-label="Mapa interactivo de Marte"></div>
+    <div class="mapOverlay topLeft"><span id="selectionHint">Selecciona el origen y el destino sobre el mapa</span></div>
+    <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
+    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC</div>
+    <div class="north">N</div>
+    <div class="scale" id="scale">0 km</div>
+  </section>
+
+  <aside class="details">
+    <section class="card">
+      <div class="sectionTitle">RUTA SELECCIONADA</div>
+      <div class="routeHeader"><h2 id="routeName">Esperando selección</h2><span id="routeStatus" class="pill">SIN RUTA</span></div>
+      <p id="routeDescription">Activa “Seleccionar A → B” y toca dos puntos del mapa.</p>
+      <div class="metricGrid">
+        <div><small>DISTANCIA TOTAL</small><strong id="distance">—</strong></div>
+        <div><small>DURACIÓN EST.</small><strong id="duration">—</strong></div>
+        <div><small>PENDIENTE MÁX.</small><strong id="maxSlope">—</strong></div>
+        <div><small>DESNIVEL ACUM.</small><strong id="gain">—</strong></div>
+      </div>
+    </section>
+
+    <section class="card riskCard">
+      <div class="sectionTitle">ÍNDICE DE RIESGO TOPOGRÁFICO</div>
+      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir de elevación MOLA muestreada a lo largo de la ruta.</small></div></div>
+      <div class="riskBar"><i id="riskBar"></i></div>
+      <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
+      <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
+      <div class="row"><span>Fuente del relieve</span><b>MOLA</b></div>
+    </section>
+
+    <section class="card">
+      <div class="sectionTitle">PARAMETROS OPERACIONALES</div>
+      <label class="inputRow"><span>Velocidad nominal</span><input id="speed" type="number" min="0.1" max="10" step="0.1" value="1.2"><em>km/h</em></label>
+      <label class="inputRow"><span>Tiempo máximo EVA</span><input id="evaTime" type="number" min="0.5" max="24" step="0.5" value="8"><em>h</em></label>
+      <label class="inputRow"><span>Margen de retorno</span><input id="returnMargin" type="number" min="0" max="80" step="5" value="25"><em>%</em></label>
+      <button class="primary" id="recalculate" disabled>Recalcular con estos parámetros</button>
+    </section>
+
+    <section class="card">
+      <div class="sectionTitle">REFERENCIA CIENTÍFICA</div>
+      <div class="reference"><b>Lugar de aterrizaje de Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Coordenadas publicadas por NASA para el aterrizaje del rover Mars 2020.</small></div>
+      <div class="reference"><b>HiRISE DTM de Jezero</b><span>1 m · producto catalogado</span><small>Modelo de alta resolución disponible en el catálogo Astrogeology; esta versión usa MOLA para el cálculo automático.</small></div>
+    </section>
+  </aside>
+</main>
+
+<div id="toast" class="toast hide"></div>
+<div id="modal" class="modal hide"><div class="modalBox"><button id="closeModal" class="close">×</button><div class="sectionTitle">FUENTES Y METODOLOGÍA</div><h2>De datos orbitales a una ruta explicable</h2><p>La interfaz utiliza cartografía pública de NASA Mars Trek. El cálculo de ruta solicita elevaciones puntuales al servicio público de MOLA, construye una malla local y busca trayectorias con A*.</p><div class="flow"><span>NASA/USGS</span><b>→</b><span>MOLA / cartografía</span><b>→</b><span>muestreo</span><b>→</b><span>A*</span><b>→</b><span>riesgo topográfico</span></div><div class="sourceList"><a target="_blank" rel="noreferrer" href="https://trek.nasa.gov/mars/">NASA Mars Trek</a><a target="_blank" rel="noreferrer" href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars">NASA Trek Map Services / MOLA</a><a target="_blank" rel="noreferrer" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/">NASA · Where is Perseverance?</a><a target="_blank" rel="noreferrer" href="https://astrogeology.usgs.gov/search/map/Mars/Mars2020/JEZ_hirise_soc_006_DTM_MOLAtopography_DeltaGeoid_1m_Eqc_latTs0_lon0_blend40">USGS/NASA · HiRISE DTM Jezero</a></div><p class="methodNote">El índice de riesgo no es un estándar NASA. Sirve para comparar alternativas dentro de esta aplicación con los parámetros definidos por el usuario.</p></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

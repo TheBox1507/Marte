@@ -1,0 +1,10 @@
+{
+  "name": "mars-explorer-final",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Planificador científico de travesías en Marte basado en datos públicos de NASA/USGS.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

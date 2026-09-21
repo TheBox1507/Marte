@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: mars-explorer
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
