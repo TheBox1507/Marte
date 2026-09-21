@@ -151,12 +151,10 @@ async function refreshDerivedLayers(force=true){
   if(slopeLayer.getVisible()) markLayerLoading('slope');
   if(roughnessLayer.getVisible()) markLayerLoading('roughness');
   try{
+    await window.marsElevationReady;
     const samples=makeGridSamples(clipped,9,9);
-    const resp=await fetch('/api/elevations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({points:samples.points})});
-    let body=null; try{body=await resp.json();}catch{}
-    if(!resp.ok) throw new Error(body?.error || `DEM ${resp.status}`);
+    const grid=await window.queryMarsElevations(samples.points);
     if(token!==derivedRefreshToken) return;
-    const grid=body.points||[];
     const get=(r,c)=>grid[r*samples.cols+c];
     const slopeFeatures=[], roughFeatures=[];
     for(let r=0;r<samples.rows-1;r++) for(let c=0;c<samples.cols-1;c++){
@@ -280,13 +278,15 @@ function buildGrid(a,b,rows=17,cols=17){
   return {nodes,rows,cols};
 }
 async function getElevations(points){
-  const response=await fetch('/api/elevations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({points})});
-  let json=null; try{json=await response.json();}catch{}
-  if(!response.ok) throw new Error(json?.error || `Servicio de elevación: ${response.status}`);
-  if(!Array.isArray(json?.points)) throw new Error('El servicio de elevación no devolvió puntos.');
-  const missing=json.points.filter(p=>!Number.isFinite(Number(p.elevationM))).length;
-  if(missing===json.points.length) throw new Error('El DEM global no devolvió ninguna elevación válida para la misión.');
-  return json.points;
+  if(!window.marsElevationReady || !window.queryMarsElevations){
+    throw new Error('La fuente global de elevación todavía está cargando. Espera unos segundos y vuelve a calcular.');
+  }
+  await window.marsElevationReady;
+  const out=await window.queryMarsElevations(points);
+  if(!Array.isArray(out)) throw new Error('La fuente global de elevación no devolvió puntos.');
+  const valid=out.filter(p=>Number.isFinite(Number(p.elevationM))).length;
+  if(valid===0) throw new Error('El DEM global no devolvió elevaciones válidas para la misión.');
+  return out;
 }
 
 function gridSizeForDistanceKm(distanceKm){

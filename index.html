@@ -35,11 +35,11 @@
       <div class="layerHint"><strong>SISTEMA DE CAPAS GLOBAL</strong><br>La base muestra relieve orbital. Pendiente y rugosidad se calculan bajo demanda con el DEM global; se activan al acercar la vista.</div>
 
       <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global de relieve · 200 m/píxel</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global de relieve · MOLA + HRSC</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
 
       <div class="layerGroupLabel">ANÁLISIS DEL TERRENO</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM MOLA · análisis local</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación · análisis MOLA</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global · análisis local</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
+      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación · derivada del DEM</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
 
       <div class="layerGroupLabel">OPERACIÓN</div>
       <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramos de la misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
@@ -124,12 +124,12 @@
 
     <section class="card riskCard">
       <div class="sectionTitle">ÍNDICE DE RIESGO TOPOGRÁFICO</div>
-      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MOLA (463 m/píxel). La pendiente y rugosidad visuales son capas derivadas para análisis; el índice de riesgo es experimental.</small></div></div>
+      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MDEM200M. La pendiente y rugosidad son capas derivadas para análisis; el índice de riesgo es experimental.</small></div></div>
       <div class="riskBar"><i id="riskBar"></i></div>
       <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
       <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
       <div class="row"><span>Margen operacional restante</span><b id="missionMargin">—</b></div>
-      <div class="row"><span>Fuente del relieve</span><b>MOLA global · 463 m</b></div>
+      <div class="row"><span>Fuente del relieve</span><b>MDEM200M · 200 m</b></div>
     </section>
 
     <section class="card">
@@ -143,7 +143,7 @@
     <section class="card">
       <div class="sectionTitle">FUENTES Y MODELO DE TERRENO</div>
       <div class="reference"><b>Punto de referencia Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Referencia opcional; la misión puede comenzar y terminar en cualquier coordenada de Marte.</small></div>
-      <div class="reference"><b>DEM global MOLA · fuente de cálculo</b><span>463 m/píxel · USGS Astrogeology</span><small>Fuente numérica interna para elevación, pendiente, desnivel y evaluación topográfica. No se muestra como una segunda capa para evitar redundancia.</small></div>
+      <div class="reference"><b>DEM global MDEM200M · fuente de cálculo</b><span>~200 m · NASA / ESA / HRSC / USGS / Esri</span><small>Fuente numérica para elevación, pendiente, desnivel y evaluación topográfica. Se consulta mediante el ElevationLayer oficial de ArcGIS.</small></div>
     </section>
   </aside>
 </main>
@@ -151,6 +151,8 @@
 <div id="toast" class="toast hide"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
+<script src="https://js.arcgis.com/4.34/"></script>
+<script src="mars-elevation.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
