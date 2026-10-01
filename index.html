@@ -3,179 +3,268 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Mars Explorer — Planificador de travesías científicas</title>
+  <title>Mars Explorer — Plataforma modular de travesías científicas</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
-  <link rel="icon" href="assets/favicon.ico?v=7" sizes="any">
-  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=7">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=7">
-  <link rel="shortcut icon" href="assets/favicon.ico?v=7">
-  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="assets/favicon.ico?v=8" sizes="any">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
+  <link rel="shortcut icon" href="assets/favicon.ico?v=8">
+  <link rel="stylesheet" href="style.css?v=26">
 </head>
-<body>
+<body data-module="planner">
 <header class="topbar">
   <div class="brand">
     <img class="brandLogo" src="assets/mars-2020-logo.png" alt="Mars 2020">
-    <div class="brandText"><b>MARS EXPLORER</b><small>PLANIFICADOR DE TRAVESÍAS CIENTÍFICAS</small><em>MARTE GLOBAL · MISIONES CIENTÍFICAS · NASA / USGS</em></div>
+    <div class="brandText">
+      <b>MARS EXPLORER</b>
+      <small>PLATAFORMA MODULAR DE TRAVESÍAS CIENTÍFICAS</small>
+      <em>MARTE GLOBAL · EVA SCIENCE NAVIGATION · NASA / USGS</em>
+    </div>
+  </div>
+  <div class="topCenter">
+    <span class="topEyebrow">MÓDULO ACTIVO</span>
+    <strong id="activeModuleLabel">MISSION PLANNER</strong>
   </div>
   <div class="topMeta"><span class="liveDot"></span><span id="statusText">DATOS CARTOGRÁFICOS · NASA / USGS</span></div>
 </header>
 
 <main class="appShell">
-  <aside class="sidebar">
-    <section>
-      <div class="sectionTitle">MISIÓN / COBERTURA</div>
-      <div class="missionCard">
-        <div class="missionBadge">MAR</div>
-        <div><strong>MARTE GLOBAL</strong><small>Cobertura planetaria · NASA / USGS</small></div>
-      </div>
-    </section>
+  <nav class="moduleRail" aria-label="Módulos de Mars Explorer">
+    <button class="moduleNav" data-module-target="explorer" title="Explorer"><span>◫</span><small>EXP</small></button>
+    <button class="moduleNav is-active" data-module-target="planner" title="Mission Planner"><span>⌁</span><small>PLAN</small></button>
+    <button class="moduleNav" data-module-target="science" title="Science"><span>⌬</span><small>SCI</small></button>
+    <button class="moduleNav" data-module-target="terrain" title="Terrain & Hazards"><span>△</span><small>HAZ</small></button>
+    <button class="moduleNav" data-module-target="eva" title="EVA Navigator"><span>⌖</span><small>EVA</small></button>
+    <button class="moduleNav" data-module-target="control" title="Mission Control"><span>◎</span><small>CTRL</small></button>
+    <button class="moduleNav" data-module-target="analysis" title="Analysis"><span>▥</span><small>ANL</small></button>
+    <button class="moduleNav" data-module-target="reports" title="Reports"><span>▤</span><small>RPT</small></button>
+    <div class="moduleRailSpacer"></div>
+    <button class="moduleNav" data-module-target="settings" title="Settings"><span>⚙</span><small>SET</small></button>
+  </nav>
 
-    <section class="layersSection">
-      <div class="sectionTitle">CAPAS CARTOGRÁFICAS</div>
-      <div class="layerHint"><strong>SISTEMA DE CAPAS GLOBAL</strong><br>La base muestra relieve orbital. Pendiente y rugosidad se calculan bajo demanda con el DEM global; se activan al acercar la vista.</div>
-
-      <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global de relieve · MOLA + HRSC</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
-
-      <div class="layerGroupLabel">ANÁLISIS DEL TERRENO</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global · análisis local</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación · derivada del DEM</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
-
-
-      <div class="layerGroupLabel">REFERENCIAS MARCIANAS</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="known" checked><span class="layerCopy"><strong>Ubicaciones conocidas</strong><small>Accidentes y regiones de referencia</small></span></span><b class="layerStatus live" data-layer-status="known">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="landing" checked><span class="layerCopy"><strong>Sitios de aterrizaje</strong><small>Misiones NASA con aterrizaje en Marte</small></span></span><b class="layerStatus live" data-layer-status="landing">ACTIVA</b></label>
-      <div class="landingPicker">
-        <label for="landingSiteSelect">Usar un aterrizaje como base</label>
-        <select id="landingSiteSelect"><option value="">Selecciona un sitio de aterrizaje…</option></select>
-        <button class="action referenceAction" id="useSelectedLanding"><span>⌂</span> Usar como base</button>
-      </div>
-
-      <div class="layerGroupLabel">OPERACIÓN</div>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas y tramos de la misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
-      <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base, objetivos y desvíos</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
-    </section>
-
-    <section>
-      <div class="sectionTitle">PLANIFICACIÓN</div>
-      <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
-
-      <div class="coordinateInline" id="coordinateInline">
-        <div class="coordinateInlineHeader">
-          <div>
-            <div class="coordinateInlineEyebrow">AÑADIR POR COORDENADAS</div>
-            <strong>Nuevo punto de misión</strong>
-          </div>
-          <span class="coordinateInlineBadge">MARTE</span>
+  <aside class="sidebar contextualPanel">
+    <!-- EXPLORER -->
+    <div class="modulePanel" data-module-panel="explorer">
+      <section>
+        <div class="sectionTitle">EXPLORER / COBERTURA</div>
+        <div class="missionCard">
+          <div class="missionBadge">MAR</div>
+          <div><strong>MARTE GLOBAL</strong><small>Cobertura planetaria · NASA / USGS</small></div>
         </div>
-        <p class="coordinateInlineHelp">Introduce latitud y longitud en grados decimales. El punto se incorporará directamente a la secuencia.</p>
-        <form id="coordinateForm" novalidate>
-          <div class="coordinateInlineGrid coordLatLon">
-            <label>Latitud
-              <input id="coordLatInput" inputmode="decimal" placeholder="18.44463" autocomplete="off">
-            </label>
-            <label>Longitud
-              <input id="coordLonInput" inputmode="decimal" placeholder="77.45088" autocomplete="off">
-            </label>
-          </div>
-          <label class="coordinateInlineField">Nombre del punto
-            <input id="coordNameInput" placeholder="Objetivo científico" maxlength="80" autocomplete="off">
-          </label>
-          <div class="coordinateInlineGrid coordMetaGrid">
-            <label>Tipo
-              <select id="coordTypeInput">
-                <option value="science">Objetivo</option>
-                <option value="base">Base</option>
-              </select>
-            </label>
-            <label>Visita
-              <select id="coordRequiredInput">
-                <option value="required">Obligatorio</option>
-                <option value="optional">Opcional</option>
-              </select>
-            </label>
-          </div>
-          <label class="coordinateInlineField">Tiempo en el objetivo (min)
-            <input id="coordDwellInput" type="number" min="0" max="1440" step="1" value="15">
-          </label>
-          <div id="coordinateError" class="coordinateInlineError hide"></div>
-          <button type="submit" id="coordinateAdd" class="coordinateInlineSubmit"><span>＋</span><span>Agregar punto a la misión</span></button>
-        </form>
-      </div>
+        <div class="moduleIntro">
+          <b>Explora antes de planificar</b>
+          <p>Navega por Marte, consulta referencias y selecciona un sitio de aterrizaje como punto de partida.</p>
+        </div>
+      </section>
 
-      <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
-      <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
+      <section>
+        <div class="sectionTitle">REFERENCIAS MARCIANAS</div>
+        <div class="landingPicker">
+          <label for="landingSiteSelect">Usar un aterrizaje como base</label>
+          <select id="landingSiteSelect"><option value="">Selecciona un sitio de aterrizaje…</option></select>
+          <button class="action referenceAction" id="useSelectedLanding"><span>⌂</span> Usar como base</button>
+        </div>
+      </section>
+
+      <section class="quickModuleLinks">
+        <div class="sectionTitle">SIGUIENTE PASO</div>
+        <button class="moduleJump" data-jump-module="planner"><span>⌁</span><div><b>Planificar una EVA</b><small>Crear base, objetivos y recorrido</small></div></button>
+        <button class="moduleJump" data-jump-module="terrain"><span>△</span><div><b>Analizar el terreno</b><small>Pendiente, rugosidad y transitabilidad</small></div></button>
+      </section>
+
+      <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
+    </div>
+
+    <!-- MISSION PLANNER -->
+    <div class="modulePanel is-active" data-module-panel="planner">
+      <section>
+        <div class="sectionTitle">MISSION PLANNER</div>
+        <div class="moduleIntro accent">
+          <b>Construye la travesía</b>
+          <p>Define la base, agrega objetivos y calcula tres estrategias de recorrido sobre el terreno marciano.</p>
+        </div>
+        <button class="action" id="planMode"><span>＋</span> Nueva misión / agregar puntos</button>
+
+        <div class="coordinateInline" id="coordinateInline">
+          <div class="coordinateInlineHeader">
+            <div>
+              <div class="coordinateInlineEyebrow">AÑADIR POR COORDENADAS</div>
+              <strong>Nuevo punto de misión</strong>
+            </div>
+            <span class="coordinateInlineBadge">MARTE</span>
+          </div>
+          <p class="coordinateInlineHelp">Introduce latitud y longitud en grados decimales. También puedes tocar directamente el mapa.</p>
+          <form id="coordinateForm" novalidate>
+            <div class="coordinateInlineGrid coordLatLon">
+              <label>Latitud<input id="coordLatInput" inputmode="decimal" placeholder="18.44463" autocomplete="off"></label>
+              <label>Longitud<input id="coordLonInput" inputmode="decimal" placeholder="77.45088" autocomplete="off"></label>
+            </div>
+            <label class="coordinateInlineField">Nombre del punto<input id="coordNameInput" placeholder="Objetivo científico" maxlength="80" autocomplete="off"></label>
+            <div class="coordinateInlineGrid coordMetaGrid">
+              <label>Tipo<select id="coordTypeInput"><option value="science">Objetivo</option><option value="base">Base</option></select></label>
+              <label>Visita<select id="coordRequiredInput"><option value="required">Obligatorio</option><option value="optional">Opcional</option></select></label>
+            </div>
+            <label class="coordinateInlineField">Tiempo en el objetivo (min)<input id="coordDwellInput" type="number" min="0" max="1440" step="1" value="15"></label>
+            <div id="coordinateError" class="coordinateInlineError hide"></div>
+            <button type="submit" id="coordinateAdd" class="coordinateInlineSubmit"><span>＋</span><span>Agregar punto</span></button>
+          </form>
+        </div>
+
+        <button class="action" id="addBase"><span>⌂</span> Fijar base en el primer punto</button>
+        <button class="action primaryAction" id="calculate" disabled><span>⌁</span> Calcular misión</button>
+        <button class="action ghost" id="clearRoute"><span>×</span> Limpiar misión</button>
+        <div class="missionCounter"><span>PUNTOS PLANIFICADOS</span><b id="pointCount">0</b></div>
+      </section>
+
+      <section class="waypointPanel">
+        <div class="sectionTitle">SECUENCIA DE VISITA</div>
+        <div id="waypointList" class="waypointList"></div>
+        <label class="returnCheck"><input id="returnBase" type="checkbox" checked><span>Regresar a la base al finalizar</span></label>
+      </section>
+
+      <section class="legendBox">
+        <div class="sectionTitle">ESTRATEGIA DE RUTA</div>
+        <label class="modeOption"><input type="radio" name="mode" value="balanced" checked><span><b>Equilibrada</b><small>Distancia + terreno</small></span></label>
+        <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
+        <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
+      </section>
+    </div>
+
+    <!-- SCIENCE -->
+    <div class="modulePanel" data-module-panel="science">
+      <section>
+        <div class="sectionTitle">SCIENCE</div>
+        <div class="moduleIntro scienceTone">
+          <b>Objetivos científicos</b>
+          <p>Este módulo concentra el valor científico, observaciones, muestras y descubrimientos asociados a cada punto.</p>
+        </div>
+        <div class="summaryStack">
+          <div class="summaryTile"><span>OBJETIVOS EN LA MISIÓN</span><b data-mirror="pointCount">0</b></div>
+          <div class="summaryTile"><span>TIEMPO EN OBJETIVOS</span><b data-mirror="dwellTotal">—</b></div>
+        </div>
+      </section>
+      <section class="roadmapCard">
+        <span class="roadmapBadge">V27+</span>
+        <b>Science Target Model</b>
+        <p>Prioridad científica, tipo de observación, tiempo mínimo/ideal, instrumentos y registro de muestras.</p>
+      </section>
+      <section>
+        <button class="moduleJump primaryModuleJump" data-jump-module="planner"><span>＋</span><div><b>Agregar objetivos</b><small>Volver al planificador</small></div></button>
+      </section>
+    </div>
+
+    <!-- TERRAIN -->
+    <div class="modulePanel" data-module-panel="terrain">
+      <section>
+        <div class="sectionTitle">TERRAIN & HAZARDS</div>
+        <div class="moduleIntro hazardTone"><b>Mapa de transitabilidad</b><p>Activa las capas derivadas para estudiar el terreno. En esta versión, pendiente y rugosidad se calculan desde el DEM global.</p></div>
+      </section>
+      <section class="layersSection">
+        <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+        <div class="layerGroupLabel">ANÁLISIS DEL TERRENO</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
+        <div class="layerGroupLabel">REFERENCIAS</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="known" checked><span class="layerCopy"><strong>Ubicaciones conocidas</strong><small>Regiones de referencia</small></span></span><b class="layerStatus live" data-layer-status="known">ACTIVA</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="landing" checked><span class="layerCopy"><strong>Sitios de aterrizaje</strong><small>Misiones NASA</small></span></span><b class="layerStatus live" data-layer-status="landing">ACTIVA</b></label>
+        <div class="layerGroupLabel">OPERACIÓN</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas de misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base y objetivos</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
+      </section>
+      <section class="roadmapCard"><span class="roadmapBadge">ROADMAP</span><b>Hazard Map</b><p>Próximas capas: obstáculos, boulder fields, cráteres, áreas prohibidas y estado UNKNOWN.</p></section>
+    </div>
+
+    <!-- EVA -->
+    <div class="modulePanel" data-module-panel="eva">
+      <section>
+        <div class="sectionTitle">EVA NAVIGATOR</div>
+        <div class="evaHero">
+          <span class="evaEyebrow">NEXT TARGET</span>
+          <b data-mirror="routeName">Esperando misión</b>
+          <strong data-mirror="distance">—</strong>
+          <small data-mirror="duration">—</small>
+        </div>
+      </section>
+      <section class="evaResourcePreview">
+        <div><span>EVA</span><b data-mirror="duration">—</b></div>
+        <div><span>RETORNO / MARGEN</span><b data-mirror="missionMargin">—</b></div>
+        <div><span>DIFICULTAD</span><b data-mirror="riskLabel">Sin evaluación</b></div>
+      </section>
+      <section>
+        <button id="evaReturnHome" class="returnHomeAction"><span>⌂</span><div><b>RETURN HOME</b><small>Recalcular misión asegurando regreso a la base</small></div></button>
+        <button class="moduleJump" data-jump-module="planner"><span>⌁</span><div><b>Editar la misión</b><small>Ajustar puntos y restricciones</small></div></button>
+      </section>
+      <p class="safetyNote">EVA Navigator es todavía un modo de planificación y simulación. No constituye navegación humana certificada.</p>
+    </div>
+
+    <!-- CONTROL -->
+    <div class="modulePanel" data-module-panel="control">
+      <section><div class="sectionTitle">MISSION CONTROL</div><div class="moduleIntro controlTone"><b>Vista operacional</b><p>Panel pensado para seguir tripulación, progreso, alertas y eventos de una EVA.</p></div></section>
+      <section class="controlBoard">
+        <div><span>PLAN ACTIVO</span><b data-mirror="routeName">Esperando misión</b></div>
+        <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
+        <div><span>TRAMOS</span><b data-mirror="legsCount">—</b></div>
+        <div><span>ESTADO</span><b data-mirror="routeStatus">SIN RUTA</b></div>
+      </section>
+      <section class="roadmapCard"><span class="roadmapBadge">V29+</span><b>Telemetría y localización</b><p>Preparado para posición de EV1/EV2, comunicaciones, recursos del traje y eventos de misión.</p></section>
+    </div>
+
+    <!-- ANALYSIS -->
+    <div class="modulePanel" data-module-panel="analysis">
+      <section><div class="sectionTitle">ANALYSIS</div><div class="moduleIntro"><b>Plan vs. resultado</b><p>Concentra las métricas del recorrido para comparar distancia, pendiente, duración y dificultad.</p></div></section>
+      <section class="analysisGrid">
+        <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
+        <div><span>DURACIÓN</span><b data-mirror="duration">—</b></div>
+        <div><span>PENDIENTE MÁX.</span><b data-mirror="maxSlope">—</b></div>
+        <div><span>DESNIVEL</span><b data-mirror="gain">—</b></div>
+      </section>
+      <button class="moduleJump" data-jump-module="reports"><span>▤</span><div><b>Generar reporte</b><small>Guardar misión y PDF</small></div></button>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="modulePanel" data-module-panel="reports">
+      <section><div class="sectionTitle">REPORTS</div><div class="moduleIntro"><b>Documentación de misión</b><p>Guarda el plan en el historial local y genera el informe PDF con las alternativas calculadas.</p></div></section>
       <button class="action saveAction" id="saveMission" disabled><span>▣</span> Guardar misión + PDF</button>
-      <button class="action ghost" id="clearRoute"><span>×</span> Limpiar misión</button>
-      <div class="missionCounter"><span>PUNTOS PLANIFICADOS</span><b id="pointCount">0</b></div>
-    </section>
+      <section class="historyPanel"><div class="sectionTitle">HISTORIAL DE MISIONES</div><div id="historyList" class="historyList"></div><p class="sideNote">El historial se conserva en este navegador.</p></section>
+    </div>
 
-    <section class="waypointPanel">
-      <div class="sectionTitle">SECUENCIA DE VISITA</div>
-      <div id="waypointList" class="waypointList"></div>
-      <label class="returnCheck"><input id="returnBase" type="checkbox" checked><span>Regresar a la base al finalizar</span></label>
-      <p class="sideNote">Toca el mapa mientras el modo misión está activo para añadir tantos objetivos y desvíos como necesites. Puedes reordenar o marcar cada objetivo como obligatorio/opcional.</p>
-    </section>
-
-
-    <section class="historyPanel">
-      <div class="sectionTitle">HISTORIAL DE MISIONES</div>
-      <div id="historyList" class="historyList"></div>
-      <p class="sideNote">Se conserva en este navegador. Puedes abrir una misión y recalcularla con nuevos parámetros.</p>
-    </section>
-
-    <section class="legendBox">
-      <div class="sectionTitle">ESTRATEGIA DE RUTA</div>
-      <label class="modeOption"><input type="radio" name="mode" value="balanced" checked><span><b>Equilibrada</b><small>Distancia + terreno</small></span></label>
-      <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
-      <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
-    </section>
-
-    <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
-    <p class="sideNote">El índice de riesgo es experimental y topográfico; sirve para comparar alternativas y no certifica la seguridad de una EVA tripulada.</p>
+    <!-- SETTINGS -->
+    <div class="modulePanel" data-module-panel="settings">
+      <section><div class="sectionTitle">SETTINGS</div><div class="moduleIntro"><b>Configuración del sistema</b><p>La arquitectura modular deja este espacio preparado para fuentes de datos, unidades, paquetes offline y perfiles de misión.</p></div></section>
+      <section class="roadmapCard"><span class="roadmapBadge">BASE</span><b>Sin cambios destructivos</b><p>Los parámetros operacionales actuales siguen en Mission Planner para conservar compatibilidad con el motor V25.</p></section>
+    </div>
   </aside>
 
   <section class="mapPanel">
     <div class="mapToolbar">
       <div>
+        <span class="mapContext" id="mapContext">MISSION PLANNER</span>
         <strong>MARTE GLOBAL</strong>
-        <small>−90° a 90° · −180° a 180° · cobertura planetaria</small>
+        <small>−90° a 90° · −180° a 180° · mapa persistente entre módulos</small>
       </div>
-      <div class="mapActions">
-        <button id="zoomIn">＋</button><button id="zoomOut">−</button><button id="center">⌖ Centro</button>
-      </div>
+      <div class="mapActions"><button id="zoomIn">＋</button><button id="zoomOut">−</button><button id="center">⌖ Centro</button></div>
     </div>
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
     <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
-    <div class="mapOverlay bottomCenter">BASE CARTOGRÁFICA: NASA MARS TREK · MOLA / HRSC · DEM MOLA para análisis</div>
-    <div class="mapLegend" id="mapLegend" aria-label="Leyenda del mapa">
-      <div class="mapLegendHeader">
-        <div>
-          <strong>LEYENDA</strong>
-          <small>Simbología del mapa</small>
-        </div>
-        <button id="toggleMapLegend" type="button" aria-expanded="true" aria-controls="mapLegendBody" title="Mostrar u ocultar leyenda">−</button>
-      </div>
+    <div class="mapOverlay bottomCenter">NASA MARS TREK · MOLA / HRSC · MDEM200M PARA ANÁLISIS</div>
+
+    <div class="mapLegend is-collapsed" id="mapLegend" aria-label="Leyenda del mapa">
+      <div class="mapLegendHeader"><div><strong>LEYENDA</strong><small>Simbología del mapa</small></div><button id="toggleMapLegend" type="button" aria-expanded="false" aria-controls="mapLegendBody">＋</button></div>
       <div class="mapLegendBody" id="mapLegendBody">
         <div class="mapLegendGroupTitle">REFERENCIAS</div>
         <div class="legendItem"><span class="legendSymbol landing"></span><span><b>Sitio de aterrizaje</b><small>Misiones que aterrizaron en Marte</small></span></div>
-        <div class="legendItem"><span class="legendSymbol known"></span><span><b>Ubicación conocida</b><small>Regiones y accidentes destacados</small></span></div>
-
+        <div class="legendItem"><span class="legendSymbol known"></span><span><b>Ubicación conocida</b><small>Regiones destacadas</small></span></div>
         <div class="mapLegendGroupTitle">MISIÓN</div>
-        <div class="legendItem"><span class="legendSymbol base">B</span><span><b>Base</b><small>Punto de inicio o retorno</small></span></div>
+        <div class="legendItem"><span class="legendSymbol base">B</span><span><b>Base</b><small>Inicio o retorno</small></span></div>
         <div class="legendItem"><span class="legendSymbol required">P</span><span><b>Objetivo obligatorio</b><small>Debe formar parte del recorrido</small></span></div>
-        <div class="legendItem"><span class="legendSymbol optional">P</span><span><b>Objetivo opcional</b><small>Puede omitirse según restricciones</small></span></div>
-
+        <div class="legendItem"><span class="legendSymbol optional">P</span><span><b>Objetivo opcional</b><small>Puede omitirse</small></span></div>
         <div class="mapLegendGroupTitle">RUTAS</div>
-        <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta seleccionada</b><small>Alternativa actualmente analizada</small></span></div>
+        <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta seleccionada</b><small>Alternativa analizada</small></span></div>
         <div class="legendItem"><span class="legendLine direct"></span><span><b>Más directa</b><small>Prioriza distancia</small></span></div>
-        <div class="legendItem"><span class="legendLine balanced"></span><span><b>Equilibrada</b><small>Distancia + terreno + tiempo</small></span></div>
-        <div class="legendItem"><span class="legendLine risk"></span><span><b>Menor exposición</b><small>Penaliza más la dificultad topográfica</small></span></div>
-
-        <div class="mapLegendGroupTitle">ANÁLISIS</div>
-        <div class="legendItem"><span class="legendGradient slope"></span><span><b>Pendiente calculada</b><small>Menor → mayor inclinación</small></span></div>
-        <div class="legendItem"><span class="legendGradient rough"></span><span><b>Rugosidad calculada</b><small>Menor → mayor variación local</small></span></div>
+        <div class="legendItem"><span class="legendLine balanced"></span><span><b>Equilibrada</b><small>Distancia + terreno</small></span></div>
+        <div class="legendItem"><span class="legendLine risk"></span><span><b>Menor exposición</b><small>Penaliza dificultad</small></span></div>
       </div>
     </div>
     <div class="north">N</div>
@@ -189,51 +278,87 @@
       <div id="mapInfoCoords" class="mapInfoCoords">—</div>
       <p id="mapInfoDescription">—</p>
       <a id="mapInfoSource" href="#" target="_blank" rel="noreferrer">Fuente</a>
-      <div class="mapInfoActions">
-        <button id="mapInfoUseBase" class="referencePrimary">Usar como base</button>
-        <button id="mapInfoAdd" class="referenceSecondary">Agregar a misión</button>
-      </div>
+      <div class="mapInfoActions"><button id="mapInfoUseBase" class="referencePrimary">Usar como base</button><button id="mapInfoAdd" class="referenceSecondary">Agregar a misión</button></div>
     </div>
   </section>
 
-  <aside class="details">
-    <section class="card">
-      <div class="sectionTitle">RUTA SELECCIONADA</div>
-      <div class="routeHeader"><h2 id="routeName">Esperando selección</h2><span id="routeStatus" class="pill">SIN RUTA</span></div>
-      <p id="routeDescription">Crea una misión y añade dos o más puntos. Cada tramo se calcula sobre el terreno real y después se consolida la misión completa.</p>
-      <div class="metricGrid">
-        <div><small>DISTANCIA TOTAL</small><strong id="distance">—</strong></div>
-        <div><small>DURACIÓN EST.</small><strong id="duration">—</strong></div>
-        <div><small>PENDIENTE MÁX.</small><strong id="maxSlope">—</strong></div>
-        <div><small>DESNIVEL ACUM.</small><strong id="gain">—</strong></div>
-        <div><small>TRAMOS</small><strong id="legsCount">—</strong></div>
-        <div><small>TIEMPO EN OBJETIVOS</small><strong id="dwellTotal">—</strong></div>
-      </div>
-    </section>
+  <aside class="details contextualPanel">
+    <!-- Explorer details -->
+    <div class="modulePanel" data-module-panel="explorer">
+      <section class="card"><div class="sectionTitle">MAPA GLOBAL</div><div class="reference"><b>Perseverance / Jezero</b><span>18.44463° N · 77.45088° E</span><small>Punto de referencia inicial; la misión puede empezar en cualquier coordenada.</small></div><div class="reference"><b>DEM MDEM200M</b><span>~200 m · NASA / ESA / HRSC / USGS / Esri</span><small>Fuente numérica para elevación y análisis topográfico.</small></div></section>
+      <section class="card"><div class="sectionTitle">FLUJO RECOMENDADO</div><div class="flowSteps"><span>1</span><p><b>Explora</b><small>Busca una región o aterrizaje.</small></p><span>2</span><p><b>Planifica</b><small>Define objetivos científicos.</small></p><span>3</span><p><b>Analiza</b><small>Evalúa terreno y restricciones.</small></p></div></section>
+    </div>
 
-    <section class="card riskCard">
-      <div class="sectionTitle">ÍNDICE DE RIESGO TOPOGRÁFICO</div>
-      <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Se calcula a partir del DEM global MDEM200M. La pendiente y rugosidad son capas derivadas para análisis; el índice de riesgo es experimental.</small></div></div>
-      <div class="riskBar"><i id="riskBar"></i></div>
-      <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
-      <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
-      <div class="row"><span>Margen operacional restante</span><b id="missionMargin">—</b></div>
-      <div class="row"><span>Fuente del relieve</span><b>MDEM200M · 200 m</b></div>
-    </section>
+    <!-- Planner details -->
+    <div class="modulePanel is-active" data-module-panel="planner">
+      <section class="card">
+        <div class="sectionTitle">RUTA SELECCIONADA</div>
+        <div class="routeHeader"><h2 id="routeName">Esperando selección</h2><span id="routeStatus" class="pill">SIN RUTA</span></div>
+        <p id="routeDescription">Crea una misión y añade dos o más puntos. Cada tramo se calcula sobre el terreno y luego se consolida la misión.</p>
+        <div class="metricGrid">
+          <div><small>DISTANCIA TOTAL</small><strong id="distance">—</strong></div>
+          <div><small>DURACIÓN EST.</small><strong id="duration">—</strong></div>
+          <div><small>PENDIENTE MÁX.</small><strong id="maxSlope">—</strong></div>
+          <div><small>DESNIVEL ACUM.</small><strong id="gain">—</strong></div>
+          <div><small>TRAMOS</small><strong id="legsCount">—</strong></div>
+          <div><small>TIEMPO EN OBJETIVOS</small><strong id="dwellTotal">—</strong></div>
+        </div>
+      </section>
 
-    <section class="card">
-      <div class="sectionTitle">PARÁMETROS OPERACIONALES</div>
-      <label class="inputRow"><span>Velocidad nominal</span><input id="speed" type="number" min="0.1" max="10" step="0.1" value="1.2"><em>km/h</em></label>
-      <label class="inputRow"><span>Tiempo máximo EVA</span><input id="evaTime" type="number" min="0.5" max="24" step="0.5" value="8"><em>h</em></label>
-      <label class="inputRow"><span>Margen de retorno</span><input id="returnMargin" type="number" min="0" max="80" step="5" value="25"><em>%</em></label>
-      <button class="primary recalcAction" id="recalculate" disabled><span>↻</span> Recalcular misión con estos parámetros</button><div class="calcMeta"><b id="calcParams">—</b><small id="lastCalculated">Último cálculo: —</small></div>
-    </section>
+      <section class="card">
+        <div class="sectionTitle">PARÁMETROS OPERACIONALES</div>
+        <label class="inputRow"><span>Velocidad nominal</span><input id="speed" type="number" min="0.1" max="10" step="0.1" value="1.2"><em>km/h</em></label>
+        <label class="inputRow"><span>Tiempo máximo EVA</span><input id="evaTime" type="number" min="0.5" max="24" step="0.5" value="8"><em>h</em></label>
+        <label class="inputRow"><span>Margen de retorno</span><input id="returnMargin" type="number" min="0" max="80" step="5" value="25"><em>%</em></label>
+        <button class="primary recalcAction" id="recalculate" disabled><span>↻</span> Recalcular misión</button>
+        <div class="calcMeta"><b id="calcParams">—</b><small id="lastCalculated">Último cálculo: —</small></div>
+      </section>
+    </div>
 
-    <section class="card">
-      <div class="sectionTitle">FUENTES Y MODELO DE TERRENO</div>
-      <div class="reference"><b>Punto de referencia Perseverance</b><span>18.44463° N · 77.45088° E</span><small>Referencia opcional; la misión puede comenzar y terminar en cualquier coordenada de Marte.</small></div>
-      <div class="reference"><b>DEM global MDEM200M · fuente de cálculo</b><span>~200 m · NASA / ESA / HRSC / USGS / Esri</span><small>Fuente numérica para elevación, pendiente, desnivel y evaluación topográfica. Se consulta mediante el ElevationLayer oficial de ArcGIS.</small></div>
-    </section>
+    <!-- Science details -->
+    <div class="modulePanel" data-module-panel="science">
+      <section class="card"><div class="sectionTitle">SCIENCE RETURN</div><div class="emptyStateIcon">⌬</div><h3>Modelo científico preparado</h3><p>El siguiente paso del motor será asignar valor científico, actividades y muestras a cada objetivo sin mezclar esa lógica con el planificador de rutas.</p></section>
+    </div>
+
+    <!-- Terrain details -->
+    <div class="modulePanel" data-module-panel="terrain">
+      <section class="card riskCard">
+        <div class="sectionTitle">DIFICULTAD TOPOGRÁFICA EXPERIMENTAL</div>
+        <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Derivada del DEM global MDEM200M. No certifica seguridad humana.</small></div></div>
+        <div class="riskBar"><i id="riskBar"></i></div>
+        <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
+        <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
+        <div class="row"><span>Margen operacional</span><b id="missionMargin">—</b></div>
+        <div class="row"><span>Fuente del relieve</span><b>MDEM200M · 200 m</b></div>
+      </section>
+      <section class="card"><div class="sectionTitle">PRINCIPIO DE SEGURIDAD</div><div class="stateLegend"><span class="safe">SAFE</span><span class="unsafe">UNSAFE</span><span class="unknown">UNKNOWN</span></div><p>La arquitectura V26 reserva explícitamente el estado UNKNOWN para futuras capas de peligros y datos incompletos.</p></section>
+    </div>
+
+    <!-- EVA details -->
+    <div class="modulePanel" data-module-panel="eva">
+      <section class="card evaStatusCard"><div class="sectionTitle">EVA STATUS</div><div class="evaStatusLine"><span>ROUTE</span><b data-mirror="routeStatus">SIN RUTA</b></div><div class="evaStatusLine"><span>DISTANCE</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>RETURN RESERVE</span><b data-mirror="missionMargin">—</b></div><div class="evaStatusLine"><span>TOPOGRAPHY</span><b data-mirror="riskLabel">Sin evaluación</b></div></section>
+      <section class="card"><div class="sectionTitle">RECURSOS EVA</div><div class="resourcePlaceholder"><span>O₂</span><i></i><b>V28</b></div><div class="resourcePlaceholder"><span>BATTERY</span><i></i><b>V28</b></div><div class="resourcePlaceholder"><span>THERMAL</span><i></i><b>V28</b></div><p>Los recursos se separarán del motor de rutas para que Planner, Navigator y Mission Control consuman el mismo estado.</p></section>
+    </div>
+
+    <!-- Control details -->
+    <div class="modulePanel" data-module-panel="control">
+      <section class="card"><div class="sectionTitle">CREW / TELEMETRY</div><div class="crewRow"><span class="crewDot standby"></span><div><b>EV1</b><small>Sin telemetría conectada</small></div></div><div class="crewRow"><span class="crewDot standby"></span><div><b>EV2</b><small>Sin telemetría conectada</small></div></div></section>
+      <section class="card"><div class="sectionTitle">MISSION EVENTS</div><div class="historyEmpty">Aún no existe un feed operacional. Este panel queda desacoplado para implementarlo sin alterar el mapa.</div></section>
+    </div>
+
+    <!-- Analysis details -->
+    <div class="modulePanel" data-module-panel="analysis">
+      <section class="card"><div class="sectionTitle">ANÁLISIS DE LA RUTA</div><div class="metricGrid"><div><small>RIESGO / DIFICULTAD</small><strong data-mirror="riskNumber">—</strong></div><div><small>PENDIENTE MEDIA</small><strong data-mirror="avgSlope">—</strong></div><div><small>SEGMENTOS</small><strong data-mirror="segments">—</strong></div><div><small>MARGEN</small><strong data-mirror="missionMargin">—</strong></div></div></section>
+      <section class="card"><div class="sectionTitle">SIGUIENTE CAPACIDAD</div><p>Perfil de elevación, comparación Plan vs. Actual y análisis por tramo vivirán aquí, sin sobrecargar el Mission Planner.</p></section>
+    </div>
+
+    <!-- Reports details -->
+    <div class="modulePanel" data-module-panel="reports">
+      <section class="card"><div class="sectionTitle">REPORTE ACTUAL</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El generador PDF existente se mantiene intacto en esta migración modular.</p></section>
+    </div>
+
+    <!-- Settings details -->
+    <div class="modulePanel" data-module-panel="settings"><section class="card"><div class="sectionTitle">ARQUITECTURA</div><p>V26 introduce un shell modular y mantiene el motor V25 compatible. Las siguientes versiones pueden extraer cada motor a archivos independientes sin rehacer la interfaz.</p></section></div>
   </aside>
 </main>
 
@@ -242,6 +367,7 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="script.js"></script>
+<script src="script.js?v=26"></script>
+<script src="modules/module-shell.js?v=26"></script>
 </body>
 </html>

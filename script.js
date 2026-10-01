@@ -79,13 +79,14 @@ function initMap(){
   const projection = ol.proj.get('EPSG:4326');
   const layers = buildLayers().layers;
   map = new ol.Map({ target:'map', layers, view:new ol.View({ projection, center:[0,0], zoom:1.5, resolutions:Array.from({length:13},(_,z)=>0.703125/Math.pow(2,z)) }), controls:[] });
-  map.on('pointermove', evt=>{ const c=evt.coordinate; if(c) $('coordReadout').textContent=`LAT ${c[1].toFixed(5)}° · LON ${c[0].toFixed(5)}°`; });
+  map.on('pointermove', evt=>{ const c=evt.coordinate; if(c) $('coordReadout').textContent=`${formatLat(c[1])} · ${formatLon(c[0])}`; });
   map.on('singleclick', onMapClick);
-  map.on('moveend', ()=>{ if(slopeLayer?.getVisible()||roughnessLayer?.getVisible()) refreshDerivedLayers(false); });
+  map.on('moveend', ()=>{ updateMapScale(); if(slopeLayer?.getVisible()||roughnessLayer?.getVisible()) refreshDerivedLayers(false); });
   $('zoomIn').onclick=()=>map.getView().setZoom(Math.min(12,map.getView().getZoom()+.7));
   $('zoomOut').onclick=()=>map.getView().setZoom(Math.max(0,map.getView().getZoom()-.7));
   $('center').onclick=()=>centerGlobal();
   centerGlobal();
+  updateMapScale();
   drawPointMarkers();
   populateReferenceLayers();
 }
@@ -140,7 +141,7 @@ function showReferencePopup(feature){
   $('mapInfoKind').textContent=kind==='landing'?'SITIO DE ATERRIZAJE':'UBICACIÓN CONOCIDA';
   $('mapInfoTitle').textContent=feature.get('name');
   $('mapInfoMeta').textContent=kind==='landing'?`${feature.get('mission')} · ${feature.get('site')} · ${feature.get('date')}`:`${feature.get('category')} · punto de referencia`;
-  $('mapInfoCoords').textContent=`${Number(feature.get('lat')).toFixed(5)}° · ${Number(feature.get('lon')).toFixed(5)}°`;
+  $('mapInfoCoords').textContent=`${formatLat(feature.get('lat'))} · ${formatLon(feature.get('lon'))}`;
   $('mapInfoDescription').textContent=feature.get('description')||'';
   $('mapInfoSource').textContent=`Fuente: ${feature.get('source')}`;
   $('mapInfoSource').href=feature.get('sourceUrl')||'#';
@@ -167,6 +168,19 @@ function setBaseFromLanding(feature){
 function centerGlobal(){ map.getView().animate({center:[0,0],zoom:1.5,duration:350}); }
 function normalizeLon(lon){ let x=((lon+180)%360+360)%360-180; return Math.abs(x)===180?180:x; }
 function clampLat(lat){ return clamp(lat,-89.5,89.5); }
+function formatLat(lat){ const n=Number(lat); return `${Math.abs(n).toFixed(4)}° ${n<0?'S':'N'}`; }
+function formatLon(lon){ const n=normalizeLon(Number(lon)); return `${Math.abs(n).toFixed(4)}° ${n<0?'W':'E'}`; }
+function updateMapScale(){
+  if(!map || !$('scale')) return;
+  const size=map.getSize();
+  const resolution=map.getView().getResolution();
+  const center=map.getView().getCenter()||[0,0];
+  const lat=clamp(Number(center[1])||0,-89,89);
+  const widthDeg=Math.min(360,Math.abs((Number(resolution)||0)*(size?.[0]||0)));
+  const kmPerDegLon=(Math.PI*MARTIAN_RADIUS/180)*Math.max(.08,Math.cos(lat*Math.PI/180));
+  const width=widthDeg*kmPerDegLon;
+  $('scale').textContent=Number.isFinite(width) ? `VISTA ~${width>=1000?Math.round(width/100)*100:Math.max(1,Math.round(width))} km` : '—';
+}
 
 function onMapClick(evt){
   const hit=map.forEachFeatureAtPixel(evt.pixel,feature=>feature.get('refKind')?feature:null,{hitTolerance:8});
@@ -343,17 +357,36 @@ function forceEndpoints(path,a,b){ if(!path||path.length<2)return path; return [
 function shortestLonDelta(a,b){ return ((b-a+540)%360)-180; }
 function interpolateLon(a,b,t){ return normalizeLon(a + shortestLonDelta(a,b)*t); }
 function buildGrid(a,b,rows=17,cols=17){
-  const latMin=clamp(Math.min(a.lat,b.lat)-Math.max(.08,Math.abs(b.lat-a.lat)*.35),-89.5,89.5);
-  const latMax=clamp(Math.max(a.lat,b.lat)+Math.max(.08,Math.abs(b.lat-a.lat)*.35),-89.5,89.5);
+  // V26: corredor 2D orientado al tramo. La versión anterior variaba la latitud
+  // por fila, pero reutilizaba la misma longitud por columna; en tramos casi N/S
+  // las columnas podían colapsar y A* no tenía espacio real para rodear terreno.
+  const directKm=Math.max(.001,haversine(a,b));
+  const kmPerDegLat=Math.PI*MARTIAN_RADIUS/180;
+  const midLat=(a.lat+b.lat)/2;
+  const kmPerDegLon=Math.max(kmPerDegLat*.08,kmPerDegLat*Math.cos(midLat*Math.PI/180));
+  const eastKm=shortestLonDelta(a.lon,b.lon)*kmPerDegLon;
+  const northKm=(b.lat-a.lat)*kmPerDegLat;
+  const norm=Math.max(.001,Math.hypot(eastKm,northKm));
+  const perpEast=-northKm/norm;
+  const perpNorth=eastKm/norm;
+  const corridorHalfWidthKm=clamp(directKm*.35,4,120);
   const nodes=[];
+
   for(let r=0;r<rows;r++){
-    const lat=latMin+(latMax-latMin)*(r/(rows-1));
+    const lateral=((r/(rows-1))-.5)*2*corridorHalfWidthKm;
     for(let c=0;c<cols;c++){
       const t=c/(cols-1);
-      nodes.push({r,c,lat,lon:interpolateLon(a.lon,b.lon,t)});
+      const centerLat=a.lat+(b.lat-a.lat)*t;
+      const centerLon=interpolateLon(a.lon,b.lon,t);
+      const offsetNorth=perpNorth*lateral;
+      const offsetEast=perpEast*lateral;
+      const lat=clamp(centerLat+offsetNorth/kmPerDegLat,-89.5,89.5);
+      const localKmPerDegLon=Math.max(kmPerDegLat*.08,kmPerDegLat*Math.cos(lat*Math.PI/180));
+      const lon=normalizeLon(centerLon+offsetEast/localKmPerDegLon);
+      nodes.push({r,c,lat,lon});
     }
   }
-  return {nodes,rows,cols};
+  return {nodes,rows,cols,corridorHalfWidthKm};
 }
 async function getElevations(points){
   if(!window.marsElevationReady || !window.queryMarsElevations){
@@ -543,7 +576,7 @@ function renderMissionList(){
   const list=$('waypointList'); list.innerHTML='';
   missionPoints.forEach((p,i)=>{
     const row=document.createElement('div'); row.className='waypoint'; const title=p.type==='base'?'BASE':`P${i}`;
-    row.innerHTML=`<div class="wpIndex">${title}</div><div class="wpMain"><input class="wpName" value="${escapeHtml(p.name)}" aria-label="Nombre del punto ${i+1}"><div class="wpMeta"><span>${p.lat.toFixed(4)}° N · ${p.lon.toFixed(4)}° E</span><button class="tag ${p.required?'required':'optional'}" data-action="toggleRequired" data-i="${i}">${p.required?'OBLIGATORIO':'OPCIONAL'}</button></div></div><div class="wpActions"><button title="Subir" data-action="up" data-i="${i}" ${i<=1?'disabled':''}>↑</button><button title="Bajar" data-action="down" data-i="${i}" ${i===missionPoints.length-1?'disabled':''}>↓</button><button title="Eliminar" data-action="delete" data-i="${i}" ${i===0?'disabled':''}>×</button></div>`;
+    row.innerHTML=`<div class="wpIndex">${title}</div><div class="wpMain"><input class="wpName" value="${escapeHtml(p.name)}" aria-label="Nombre del punto ${i+1}"><div class="wpMeta"><span>${formatLat(p.lat)} · ${formatLon(p.lon)}</span><button class="tag ${p.required?'required':'optional'}" data-action="toggleRequired" data-i="${i}">${p.required?'OBLIGATORIO':'OPCIONAL'}</button></div></div><div class="wpActions"><button title="Subir" data-action="up" data-i="${i}" ${i<=1?'disabled':''}>↑</button><button title="Bajar" data-action="down" data-i="${i}" ${i===missionPoints.length-1?'disabled':''}>↓</button><button title="Eliminar" data-action="delete" data-i="${i}" ${i===0?'disabled':''}>×</button></div>`;
     list.appendChild(row);
   });
   list.querySelectorAll('.wpName').forEach((input,i)=>input.onchange=()=>{missionPoints[i].name=input.value.trim()||`Objetivo ${i}`; currentMission=null; updatePlanningUI();});
@@ -803,6 +836,11 @@ const mapLegend=$('mapLegend');
 toggleMapLegend?.addEventListener('click',()=>{
   const collapsed=mapLegend?.classList.toggle('is-collapsed');
   if(toggleMapLegend){ toggleMapLegend.textContent=collapsed?'＋':'−'; toggleMapLegend.setAttribute('aria-expanded',String(!collapsed)); }
+});
+
+
+window.addEventListener('jezero:modulechange',()=>{
+  requestAnimationFrame(()=>{ map?.updateSize(); updateMapScale(); });
 });
 
 (async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
