@@ -66,10 +66,11 @@ function minEvaHours(mission){
 }
 function riskScoreForLeg(m){
   if(!m || !finite(m.maxSlopeDeg)) return null;
-  const slopePenalty=Math.min(1,Math.max(0,Number(m.maxSlopeDeg)/25))*70;
-  const terrainPenalty=Math.min(1,Math.max(0,(Number(m.elevationChangeM)||0)/1000))*20;
-  const avgPenalty=Math.min(1,Math.max(0,(Number(m.avgSlopeDeg)||0)/18))*10;
-  return Math.round(Math.min(100,slopePenalty+terrainPenalty+avgPenalty));
+  const slopePenalty=Math.min(1,Math.max(0,Number(m.maxSlopeDeg)/25))*35;
+  const transitPenalty=Math.min(1,Math.max(0,(100-Number(m.minTransitability ?? 100))/100))*30;
+  const uncertaintyPenalty=Math.min(1,Math.max(0,(100-Number(m.avgConfidence ?? 100))/100))*20;
+  const roughnessPenalty=Math.min(1,Math.max(0,(Number(m.avgRoughnessDeg)||0)/10))*15;
+  return Math.round(Math.min(100,slopePenalty+transitPenalty+uncertaintyPenalty+roughnessPenalty));
 }
 function pointStatus(pt){
   if(pt?.type==='base') return 'BASE';
@@ -99,14 +100,17 @@ export function buildMissionPdf(report){
 
   // Encabezado / identificación
   items.push({kind:'title',text:'JEZERO',size:22,bold:true,color:'copper'});
-  add('Informe completo de planificación de travesía científica EVA en Marte',{size:10,bold:true});
+  add('Informe completo de planificación de travesía científica EVA en Marte - motor multicriterio V29',{size:10,bold:true});
   add(`Identificador del informe: ${report.reportId || '--'}`);
   add(`Generado: ${fmtDate(report.generatedAt)}`);
-  add(`Versión del sistema: ${report.software?.version || '--'} · Tema: ${report.software?.interfaceTheme || 'Jezero Sand'} · Idioma: español`);
+  add(`Versión del sistema: ${report.software?.version || '--'} · Tema de interfaz: ${report.software?.interfaceTheme || '--'} · Idioma: español`);
   rule();
 
   heading('1. IDENTIFICACIÓN Y RESUMEN DE LA MISIÓN');
   add(`Nombre: ${report.mission?.name || 'Misión EVA'}`);
+  if(report.mission?.code) add(`Código / ID: ${report.mission.code}`);
+  if(report.mission?.crew) add(`Tripulación: ${report.mission.crew}`);
+  if(report.mission?.notes) add(`Notas del plan: ${report.mission.notes}`);
   add(`Estrategia seleccionada: ${strategyName(report.selectedMode)}`);
   add(`Estado operacional del cálculo: ${report.selected?.overBudget ? 'FUERA DEL LÍMITE CONFIGURADO' : 'DENTRO DE LOS PARÁMETROS CONFIGURADOS'}`);
   add(`Regreso a la base al finalizar: ${report.returnBase ? 'Sí' : 'No'}`);
@@ -122,6 +126,9 @@ export function buildMissionPdf(report){
   add(`Velocidad nominal configurada: ${finite(p.speed)?Number(p.speed).toFixed(2):'--'} km/h`);
   add(`Tiempo máximo EVA configurado: ${finite(p.evaTime)?Number(p.evaTime).toFixed(2):'--'} h`);
   add(`Margen reservado para retorno: ${finite(p.returnMargin)?Number(p.returnMargin).toFixed(0):'--'} %`);
+  add(`Pendiente máxima permitida (límite duro): ${finite(p.maxSlopeLimit)?Number(p.maxSlopeLimit).toFixed(1):'--'}°`);
+  add(`Transitabilidad mínima permitida (límite duro): ${finite(p.minTransitability)?Number(p.minTransitability).toFixed(0):'--'} / 100`);
+  add(`Confianza cartográfica mínima permitida (límite duro): ${finite(p.minConfidence)?Number(p.minConfidence).toFixed(0):'--'} %`);
   add(`Tiempo disponible para la misión después de la reserva: ${fmtHours(report.selected?.availableHours)}`);
   add(`Tiempo mínimo de EVA necesario para conservar el margen configurado: ${fmtHours(minEvaHours(report.selected))}`);
   const dwellH=(Number(report.selected?.dwellMinutes)||0)/60;
@@ -130,21 +137,22 @@ export function buildMissionPdf(report){
   add(`Tiempo estimado de desplazamiento: ${fmtHours(travelH)}`);
   add(`Duración total estimada: ${fmtHours(report.selected?.duration)}`);
   add(`Margen operacional restante: ${fmtHours((Number(report.selected?.availableHours)||0)-(Number(report.selected?.duration)||0))}`);
-  add('Oxígeno, batería y control térmico: NO MODELADOS EN V27. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.');
+  add('Oxígeno, batería y control térmico: NO MODELADOS EN V29. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.');
   rule();
 
   heading('3. TODOS LOS PUNTOS PLANIFICADOS');
-  tableRow(['#','Nombre','Tipo','Latitud','Longitud','Parada'],[3,25,12,15,16,8],{header:true});
+  tableRow(['#','Nombre','Tipo','Latitud','Longitud','Ciencia','Parada'],[3,20,11,14,15,7,7],{header:true});
   (report.points||[]).forEach((pt,i)=>{
-    tableRow([i+1,pt.name||`Punto ${i+1}`,pointStatus(pt),fmtLat(pt.lat),fmtLon(pt.lon),`${Number(pt.dwellMin||0)} min`],[3,25,12,15,16,8]);
-    add(`   Requerido: ${pt.required?'Sí':'No'} · Elevación del punto: ${finite(pt.elevationM)?fmtM(pt.elevationM):'no almacenada en el punto maestro'}`,{size:7.6});
+    tableRow([i+1,pt.name||`Punto ${i+1}`,pointStatus(pt),fmtLat(pt.lat),fmtLon(pt.lon),pt.type==='base'?'--':`${Math.round(Number(pt.scienceValue)||0)}`,`${Number(pt.dwellMin||0)}m`],[3,20,11,14,15,7,7]);
+    add(`   Requerido: ${pt.required?'Sí':'No'} · Categoría científica: ${pt.scienceCategory || '--'} · Elevación del punto: ${finite(pt.elevationM)?fmtM(pt.elevationM):'no almacenada en el punto maestro'}`,{size:7.6});
+    if(pt.scienceNotes) add(`   Nota científica: ${pt.scienceNotes}`,{size:7.4});
   });
   rule();
 
   heading('4. SECUENCIA SELECCIONADA');
   const selectedPoints=report.selected?.includedPoints || report.selected?.sequence || [];
   selectedPoints.forEach((pt,i)=>{
-    add(`${i+1}. ${pt.name || `Punto ${i+1}`} · ${pointStatus(pt)} · ${coordText(pt)} · parada ${Number(pt.dwellMin||0)} min`,{bold:i===0});
+    add(`${i+1}. ${pt.name || `Punto ${i+1}`} · ${pointStatus(pt)} · ${coordText(pt)} · parada ${Number(pt.dwellMin||0)} min${pt.scienceCategory?` · ${pt.scienceCategory}`:''}`,{bold:i===0});
   });
   if(!selectedPoints.length) add('No hay secuencia seleccionada disponible.');
   rule();
@@ -155,9 +163,14 @@ export function buildMissionPdf(report){
   if(report.selected?.strategyDescription) add(`Descripción: ${report.selected.strategyDescription}`);
   add(`Distancia total: ${fmtKm(sm.distanceKm)}`);
   add(`Duración estimada: ${fmtHours(report.selected?.duration)}`);
-  add(`Dificultad topográfica experimental: ${riskText(report.selected?.score)}`);
+  add(`Dificultad multicriterio experimental: ${riskText(report.selected?.score)}`);
   add(`Pendiente máxima: ${fmtDeg(sm.maxSlopeDeg)}`);
-  add(`Pendiente media: ${fmtDeg(sm.avgSlopeDeg)}`);
+  add(`Pendiente media absoluta: ${fmtDeg(sm.avgSlopeDeg)}`);
+  add(`Pendiente máxima de subida: ${fmtDeg(sm.maxUphillSlopeDeg)} · pendiente máxima de bajada: ${fmtDeg(sm.maxDownhillSlopeDeg)}`);
+  add(`Transitabilidad media: ${finite(sm.avgTransitability)?Number(sm.avgTransitability).toFixed(0):'--'} / 100 · mínima: ${finite(sm.minTransitability)?Number(sm.minTransitability).toFixed(0):'--'} / 100`);
+  add(`Confianza cartográfica media: ${finite(sm.avgConfidence)?Number(sm.avgConfidence).toFixed(0):'--'} % · mínima: ${finite(sm.minConfidence)?Number(sm.minConfidence).toFixed(0):'--'} %`);
+  add(`Rugosidad angular media estimada: ${fmtDeg(sm.avgRoughnessDeg)} · distancia con confianza <50%: ${fmtKm(sm.uncertainDistanceKm)} · distancia difícil: ${fmtKm(sm.difficultDistanceKm)}`);
+  add(`Valor científico incluido: ${Math.round(Number(report.selected?.scienceValueTotal)||0)} puntos de ${Math.round(Number(report.selected?.scienceValuePotential)||0)} potenciales · cobertura científica: ${finite(report.selected?.scienceEfficiency)?Number(report.selected.scienceEfficiency).toFixed(0):'--'} %`);
   add(`Ascenso acumulado: ${fmtM(sm.gainM)}`);
   add(`Descenso acumulado: ${fmtM(sm.descentM)}`);
   add(`Variación altimétrica acumulada: ${fmtM(sm.elevationChangeM)}`);
@@ -171,7 +184,7 @@ export function buildMissionPdf(report){
   if(rb){
     add(`Duración si se visitan únicamente base/objetivos obligatorios: ${fmtHours(rb.duration)}`);
     add(`Tiempo programado en objetivos obligatorios: ${fmtHours((Number(rb.dwellMinutes)||0)/60)}`);
-    add(`Dificultad topográfica: ${riskText(rb.score)}`);
+    add(`Dificultad multicriterio: ${riskText(rb.score)} · valor científico obligatorio: ${Math.round(Number(rb.scienceValueTotal)||0)} puntos`);
     add(`Distancia: ${fmtKm(rb.metrics?.distanceKm)} · Pendiente máxima: ${fmtDeg(rb.metrics?.maxSlopeDeg)} · Pendiente media: ${fmtDeg(rb.metrics?.avgSlopeDeg)}`);
     add(`Secuencia: ${(rb.sequence||[]).map(x=>x.name||'Punto').join(' -> ') || '--'}`);
   } else add('No se recibió una línea base independiente para objetivos obligatorios.');
@@ -183,7 +196,8 @@ export function buildMissionPdf(report){
     tableRow([strategyName(s.mode),fmtKm(s.metrics?.distanceKm),fmtHours(s.duration),fmtHours(minEvaHours(s)),riskText(s.score),s.overBudget?'FUERA':'OK'],[18,13,13,13,17,11]);
     add(`   Descripción: ${s.strategyDescription || '--'}`,{size:7.6});
     add(`   Secuencia: ${(s.includedPoints||s.sequence||[]).map(x=>x.type==='base'?'BASE':x.name||'Objetivo').join(' -> ') || '--'}`,{size:7.6});
-    add(`   Pendiente máx.: ${fmtDeg(s.metrics?.maxSlopeDeg)} · media: ${fmtDeg(s.metrics?.avgSlopeDeg)} · ascenso: ${fmtM(s.metrics?.gainM)} · descenso: ${fmtM(s.metrics?.descentM)} · segmentos: ${s.metrics?.segments ?? '--'}`,{size:7.6});
+    add(`   Pendiente máx.: ${fmtDeg(s.metrics?.maxSlopeDeg)} · subida máx.: ${fmtDeg(s.metrics?.maxUphillSlopeDeg)} · bajada máx.: ${fmtDeg(s.metrics?.maxDownhillSlopeDeg)} · transitabilidad: ${finite(s.metrics?.avgTransitability)?Number(s.metrics.avgTransitability).toFixed(0):'--'}/100 · confianza: ${finite(s.metrics?.avgConfidence)?Number(s.metrics.avgConfidence).toFixed(0):'--'}%`,{size:7.6});
+    add(`   Ascenso: ${fmtM(s.metrics?.gainM)} · descenso: ${fmtM(s.metrics?.descentM)} · segmentos: ${s.metrics?.segments ?? '--'} · ciencia: ${Math.round(Number(s.scienceValueTotal)||0)}/${Math.round(Number(s.scienceValuePotential)||0)} puntos`,{size:7.6});
     add(`   Opcionales omitidos: ${s.omittedOptional?.length ? s.omittedOptional.map(x=>x.name||'Objetivo').join(', ') : 'ninguno'}`,{size:7.6});
   });
   rule();
@@ -194,7 +208,8 @@ export function buildMissionPdf(report){
     subheading(`Tramo ${i+1}: ${leg.from?.name || 'Salida'} -> ${leg.to?.name || 'Llegada'}`);
     add(`Origen: ${coordText(leg.from)} · Destino: ${coordText(leg.to)}`);
     add(`Distancia: ${fmtKm(m.distanceKm)} · Duración: ${fmtHours(leg.durationHours)} · Dificultad: ${riskText(riskScoreForLeg(m))}`);
-    add(`Pendiente máxima: ${fmtDeg(m.maxSlopeDeg)} · Pendiente media: ${fmtDeg(m.avgSlopeDeg)}`);
+    add(`Pendiente máxima: ${fmtDeg(m.maxSlopeDeg)} · subida máx.: ${fmtDeg(m.maxUphillSlopeDeg)} · bajada máx.: ${fmtDeg(m.maxDownhillSlopeDeg)} · media: ${fmtDeg(m.avgSlopeDeg)}`);
+    add(`Transitabilidad media/mínima: ${finite(m.avgTransitability)?Number(m.avgTransitability).toFixed(0):'--'} / ${finite(m.minTransitability)?Number(m.minTransitability).toFixed(0):'--'} · confianza media/mínima: ${finite(m.avgConfidence)?Number(m.avgConfidence).toFixed(0):'--'}% / ${finite(m.minConfidence)?Number(m.minConfidence).toFixed(0):'--'}% · separación de malla: ${finite(leg.gridSpacingKm)?fmtKm(leg.gridSpacingKm):'--'}`);
     add(`Ascenso: ${fmtM(m.gainM)} · Descenso: ${fmtM(m.descentM)} · Variación altimétrica: ${fmtM(m.elevationChangeM)} · Segmentos: ${m.segments ?? '--'}`);
     add(`Parada programada al llegar: ${Number(leg.to?.dwellMin||0)} min · Nodos almacenados de la trayectoria: ${leg.path?.length ?? 0}`);
   });
@@ -214,14 +229,16 @@ export function buildMissionPdf(report){
   add(`Radio marciano usado para distancias: ${finite(report.dataSources?.marsRadiusKm)?Number(report.dataSources.marsRadiusKm).toFixed(1):'3389.5'} km`);
   add(`Motor: A* sobre corredor de búsqueda 2D adaptado al tramo. Estrategias: más directa, equilibrada y menor exposición.`);
   add(`Modelo de duración: velocidad nominal ajustada por pendiente media más tiempos de permanencia en objetivos.`);
-  add(`Modelo de dificultad: combinación experimental de pendiente máxima, pendiente media y cambio de elevación.`);
+  add(`Motor V29: A* multicriterio con pendiente direccional, transitabilidad, rugosidad local, incertidumbre/confianza cartográfica y límites duros configurables.`);
+  add(`Selección científica: los objetivos opcionales se priorizan por valor científico frente al costo incremental de distancia, tiempo, dificultad y confianza de la ruta.`);
+  add(`Modelo de dificultad: combina pendiente, transitabilidad mínima, confianza cartográfica y rugosidad angular. Los límites duros excluyen segmentos del grafo; no son simples penalizaciones.`);
   rule();
 
   heading('11. LIMITACIONES Y SEGURIDAD');
-  add('JEZERO V27 es una herramienta de planificación y simulación. El índice de dificultad topográfica NO constituye una certificación de seguridad para una EVA tripulada.');
+  add('JEZERO V29 es una herramienta de planificación y simulación. Sus índices de transitabilidad, confianza y dificultad NO constituyen una certificación de seguridad para una EVA tripulada.');
   add('La resolución y calidad de la ruta dependen de los datos de elevación disponibles. MDEM200M es apropiado para planificación regional, no para detectar obstáculos de escala humana como rocas pequeñas, zanjas o bordes locales.');
-  add('Los estados futuros de peligros deberán distinguir SEGURO, NO SEGURO y DESCONOCIDO. Un área sin datos no debe interpretarse automáticamente como segura.');
-  add('Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V27.');
+  add('El motor V28 bloquea elevación desconocida y puede bloquear baja confianza según el umbral configurado. Aun así, la confianza calculada es una estimación de calidad del muestreo, no una validación de obstáculos a escala humana.');
+  add('Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V29.');
   rule();
 
   // Apéndice exhaustivo: conserva todos los nodos calculados para las tres estrategias.
@@ -231,8 +248,8 @@ export function buildMissionPdf(report){
     subheading(`${12}.${si+1} Estrategia ${strategyName(s.mode)} · ${s.legs?.length ?? 0} tramo(s)`);
     (s.legs||[]).forEach((leg,li)=>{
       add(`Tramo ${li+1}: ${leg.from?.name||'Salida'} -> ${leg.to?.name||'Llegada'} · ${fmtKm(leg.metrics?.distanceKm)} · ${fmtHours(leg.durationHours)}`,{bold:true,size:8.2});
-      tableRow(['Nodo','Latitud','Longitud','Elevación'],[8,18,18,16],{header:true});
-      (leg.path||[]).forEach((node,ni)=>tableRow([node.index ?? ni+1,fmtLat(node.lat),fmtLon(node.lon),finite(node.elevationM)?fmtM(node.elevationM):'--'],[8,18,18,16]));
+      tableRow(['N','Latitud','Longitud','Elev.','Pend.','Trans.','Conf.'],[4,14,14,9,8,8,8],{header:true});
+      (leg.path||[]).forEach((node,ni)=>tableRow([node.index ?? ni+1,fmtLat(node.lat),fmtLon(node.lon),finite(node.elevationM)?fmtM(node.elevationM):'--',finite(node.signedSlopeDeg)?fmtDeg(node.signedSlopeDeg):'--',finite(node.transitability)?Number(node.transitability).toFixed(0):'--',finite(node.edgeConfidence??node.dataConfidence)?`${Number(node.edgeConfidence??node.dataConfidence).toFixed(0)}%`:'--'],[4,14,14,9,8,8,8]));
       if(!(leg.path||[]).length) add('   Sin nodos de trayectoria almacenados.',{size:7.6});
     });
   });
@@ -263,7 +280,7 @@ export function buildMissionPdf(report){
     body:'0.12 0.10 0.08',
     heading:'0.36 0.20 0.12',
     sand:'0.55 0.36 0.20',
-    copper:'0.65 0.29 0.16',
+    copper:'0.18 0.36 0.45',
     muted:'0.38 0.34 0.30'
   };
   const pageObjs=[];
@@ -272,7 +289,7 @@ export function buildMissionPdf(report){
     const page=pages[pi];
     let y=startY;
     const content=['q'];
-    // Franja superior Jezero Sand.
+    // Franja superior del informe.
     content.push('0.83 0.65 0.45 rg 0 770 612 22 re f');
     content.push('0.07 0.06 0.05 rg 0 0 612 20 re f');
     for(const item of page){

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
   <link rel="shortcut icon" href="assets/favicon.ico?v=8">
-  <link rel="stylesheet" href="style.css?v=27">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body data-module="planner">
 <header class="topbar">
@@ -36,8 +36,7 @@
     <button class="moduleNav" data-module-target="terrain" title="Terreno y peligros"><span>△</span><small>TERRENO</small></button>
     <button class="moduleNav" data-module-target="eva" title="Navegador EVA"><span>⌖</span><small>NAVEGADOR EVA</small></button>
     <button class="moduleNav" data-module-target="control" title="Control de misión"><span>◎</span><small>CONTROL</small></button>
-    <button class="moduleNav" data-module-target="analysis" title="Análisis"><span>▥</span><small>ANÁLISIS</small></button>
-    <button class="moduleNav" data-module-target="reports" title="Informes"><span>▤</span><small>INFORMES</small></button>
+    <button class="moduleNav" data-module-target="analysis" title="Resultados e informes"><span>▤</span><small>RESULTADOS</small></button>
     <div class="moduleRailSpacer"></div>
     <button class="moduleNav" data-module-target="settings" title="Configuración"><span>⚙</span><small>CONFIGURACIÓN</small></button>
   </nav>
@@ -104,7 +103,10 @@
               <label>Tipo<select id="coordTypeInput"><option value="science">Objetivo</option><option value="base">Base</option></select></label>
               <label>Visita<select id="coordRequiredInput"><option value="required">Obligatorio</option><option value="optional">Opcional</option></select></label>
             </div>
-            <label class="coordinateInlineField">Tiempo en el objetivo (min)<input id="coordDwellInput" type="number" min="0" max="1440" step="1" value="15"></label>
+            <div class="coordinateInlineGrid coordScienceGrid">
+              <label>Tiempo en el objetivo (min)<input id="coordDwellInput" type="number" min="0" max="1440" step="1" value="15"></label>
+              <label>Valor científico (0-100)<input id="coordScienceValueInput" type="number" min="0" max="100" step="1" value="70"></label>
+            </div>
             <div id="coordinateError" class="coordinateInlineError hide"></div>
             <button type="submit" id="coordinateAdd" class="coordinateInlineSubmit"><span>＋</span><span>Agregar punto</span></button>
           </form>
@@ -135,21 +137,24 @@
       <section>
         <div class="sectionTitle">CIENCIA</div>
         <div class="moduleIntro scienceTone">
-          <b>Objetivos científicos</b>
-          <p>Este módulo concentra el valor científico, observaciones, muestras y descubrimientos asociados a cada punto.</p>
+          <b>Diseño científico de la travesía</b>
+          <p>Edita cada objetivo desde aquí. El valor científico, el tiempo de trabajo y si es obligatorio u opcional participan directamente en el cálculo de la misión.</p>
         </div>
-        <div class="summaryStack">
-          <div class="summaryTile"><span>OBJETIVOS EN LA MISIÓN</span><b data-mirror="pointCount">0</b></div>
-          <div class="summaryTile"><span>TIEMPO EN OBJETIVOS</span><b data-mirror="dwellTotal">—</b></div>
+        <div class="summaryStack scienceSummaryGrid">
+          <div class="summaryTile"><span>OBJETIVOS</span><b id="scienceTargetCount">0</b></div>
+          <div class="summaryTile"><span>VALOR POTENCIAL</span><b id="scienceValuePotential">0 pts</b></div>
+          <div class="summaryTile"><span>VALOR INCLUIDO</span><b data-mirror="scienceValueTotal">—</b></div>
+          <div class="summaryTile"><span>EFICIENCIA</span><b id="scienceEfficiency">—</b></div>
         </div>
       </section>
-      <section class="roadmapCard">
-        <span class="roadmapBadge">V27+</span>
-        <b>Modelo de objetivos científicos</b>
-        <p>Prioridad científica, tipo de observación, tiempo mínimo/ideal, instrumentos y registro de muestras.</p>
+      <section class="scienceEditorSection">
+        <div class="sectionTitle">OBJETIVOS CIENTÍFICOS</div>
+        <div id="scienceObjectivesList" class="scienceObjectivesList"></div>
+        <div id="scienceEmpty" class="historyEmpty">Agrega objetivos en el Planificador para configurarlos científicamente.</div>
       </section>
-      <section>
-        <button class="moduleJump primaryModuleJump" data-jump-module="planner"><span>＋</span><div><b>Agregar objetivos</b><small>Volver al planificador</small></div></button>
+      <section class="scienceActions">
+        <button id="scienceRecalculate" class="action primaryAction" disabled><span>⌁</span> Aplicar cambios y recalcular</button>
+        <button class="moduleJump" data-jump-module="planner"><span>＋</span><div><b>Agregar otro objetivo</b><small>Volver al planificador y marcarlo en el mapa</small></div></button>
       </section>
     </div>
 
@@ -172,7 +177,7 @@
         <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas de misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
         <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base y objetivos</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
       </section>
-      <section class="roadmapCard"><span class="roadmapBadge">PRÓXIMAMENTE</span><b>Mapa de peligros</b><p>Próximas capas: obstáculos, campos de rocas, cráteres, áreas prohibidas y estado DESCONOCIDO.</p></section>
+      <section class="roadmapCard"><span class="roadmapBadge">V29 ACTIVO</span><b>Transitabilidad e incertidumbre</b><p>El motor combina pendiente direccional, rugosidad local, confianza cartográfica y límites duros. Si un segmento viola los límites, A* no puede atravesarlo.</p></section>
     </div>
 
     <!-- EVA -->
@@ -210,29 +215,54 @@
       <section class="roadmapCard"><span class="roadmapBadge">V29+</span><b>Telemetría y localización</b><p>Preparado para posición de EV1/EV2, comunicaciones, recursos del traje y eventos de misión.</p></section>
     </div>
 
-    <!-- ANALYSIS -->
+    <!-- ANALYSIS / RESULTS -->
     <div class="modulePanel" data-module-panel="analysis">
-      <section><div class="sectionTitle">ANÁLISIS</div><div class="moduleIntro"><b>Plan frente a resultado</b><p>Concentra las métricas del recorrido para comparar distancia, pendiente, duración y dificultad.</p></div></section>
-      <section class="analysisGrid">
+      <section>
+        <div class="sectionTitle">RESULTADOS</div>
+        <div class="moduleIntro"><b>Análisis y documentación en un solo lugar</b><p>Revisa el resultado seleccionado, guarda la misión y genera el informe PDF sin cambiar de módulo.</p></div>
+      </section>
+      <section class="analysisGrid resultsGrid">
         <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
         <div><span>DURACIÓN</span><b data-mirror="duration">—</b></div>
-        <div><span>PENDIENTE MÁX.</span><b data-mirror="maxSlope">—</b></div>
-        <div><span>DESNIVEL</span><b data-mirror="gain">—</b></div>
+        <div><span>DIFICULTAD</span><b data-mirror="riskLabel">—</b></div>
+        <div><span>TRANSITABILIDAD</span><b data-mirror="avgTransitability">—</b></div>
+        <div><span>CONFIANZA</span><b data-mirror="avgConfidence">—</b></div>
+        <div><span>CIENCIA</span><b data-mirror="scienceValueTotal">—</b></div>
       </section>
-      <button class="moduleJump" data-jump-module="reports"><span>▤</span><div><b>Generar reporte</b><small>Guardar misión y PDF</small></div></button>
-    </div>
-
-    <!-- REPORTS -->
-    <div class="modulePanel" data-module-panel="reports">
-      <section><div class="sectionTitle">INFORMES</div><div class="moduleIntro"><b>Documentación completa de la misión</b><p>Guarda el plan en el historial local y genera un PDF detallado con todos los datos disponibles de la misión y sus alternativas calculadas.</p></div></section>
-      <button class="action saveAction" id="saveMission" disabled><span>▣</span> Guardar misión + PDF</button>
-      <section class="historyPanel"><div class="sectionTitle">HISTORIAL DE MISIONES</div><div id="historyList" class="historyList"></div><p class="sideNote">El historial se conserva en este navegador.</p></section>
+      <button class="action saveAction resultsSave" id="saveMission" disabled><span>▣</span> Guardar misión y generar PDF</button>
+      <section class="historyPanel"><div class="sectionTitle">HISTORIAL DE MISIONES</div><div id="historyList" class="historyList"></div><p class="sideNote">El historial se conserva localmente en este navegador.</p></section>
     </div>
 
     <!-- SETTINGS -->
     <div class="modulePanel" data-module-panel="settings">
-      <section><div class="sectionTitle">CONFIGURACIÓN</div><div class="moduleIntro"><b>Configuración del sistema</b><p>La arquitectura modular deja este espacio preparado para fuentes de datos, unidades, paquetes sin conexión y perfiles de misión.</p></div></section>
-      <section class="roadmapCard"><span class="roadmapBadge">BASE</span><b>Sin cambios destructivos</b><p>Los parámetros operacionales actuales siguen en el Planificador de misión para conservar compatibilidad con el motor anterior.</p></section>
+      <section>
+        <div class="sectionTitle">CONFIGURACIÓN</div>
+        <div class="moduleIntro"><b>Perfil de misión y preferencias</b><p>Define la identificación del plan, guarda parámetros operacionales como predeterminados y administra los datos locales de JEZERO.</p></div>
+      </section>
+
+      <section class="settingsGroup">
+        <div class="sectionTitle">IDENTIFICACIÓN DE LA MISIÓN</div>
+        <label class="settingsField"><span>Nombre de misión</span><input id="missionNameSetting" maxlength="80" placeholder="EVA científica Jezero"></label>
+        <label class="settingsField"><span>Código / ID</span><input id="missionCodeSetting" maxlength="40" placeholder="EVA-04"></label>
+        <label class="settingsField"><span>Tripulación</span><input id="crewSetting" maxlength="100" placeholder="EV1, EV2"></label>
+        <label class="settingsField"><span>Notas del plan</span><textarea id="missionNotesSetting" rows="3" maxlength="500" placeholder="Objetivo general, restricciones u observaciones..."></textarea></label>
+      </section>
+
+      <section class="settingsGroup">
+        <div class="sectionTitle">PARÁMETROS PREDETERMINADOS</div>
+        <p class="settingsHelp">Toma los valores actuales del Planificador: velocidad, duración EVA, margen de retorno y límites de navegación.</p>
+        <button id="saveDefaultsBtn" class="action"><span>↓</span> Guardar parámetros actuales como predeterminados</button>
+        <button id="restoreDefaultsBtn" class="action"><span>↻</span> Aplicar parámetros predeterminados</button>
+        <div class="settingsStatus" id="defaultsStatus">Usando valores de fábrica hasta que guardes un perfil.</div>
+      </section>
+
+      <section class="settingsGroup">
+        <div class="sectionTitle">DATOS LOCALES</div>
+        <button id="exportMissionJson" class="action"><span>⇩</span> Exportar misión a JSON</button>
+        <button id="importMissionJson" class="action"><span>⇧</span> Importar misión desde JSON</button>
+        <input id="importMissionFile" type="file" accept="application/json,.json" hidden>
+        <button id="clearHistoryBtn" class="action dangerAction"><span>×</span> Borrar historial local</button>
+      </section>
     </div>
   </aside>
 
@@ -310,6 +340,10 @@
         <label class="inputRow"><span>Velocidad nominal</span><input id="speed" type="number" min="0.1" max="10" step="0.1" value="1.2"><em>km/h</em></label>
         <label class="inputRow"><span>Tiempo máximo EVA</span><input id="evaTime" type="number" min="0.5" max="24" step="0.5" value="8"><em>h</em></label>
         <label class="inputRow"><span>Margen de retorno</span><input id="returnMargin" type="number" min="0" max="80" step="5" value="25"><em>%</em></label>
+        <div class="sectionTitle constraintTitle">LÍMITES DUROS DE NAVEGACIÓN</div>
+        <label class="inputRow"><span>Pendiente máxima permitida</span><input id="maxSlopeLimit" type="number" min="1" max="45" step="1" value="25"><em>°</em></label>
+        <label class="inputRow"><span>Transitabilidad mínima</span><input id="minTransitability" type="number" min="0" max="100" step="5" value="25"><em>/100</em></label>
+        <label class="inputRow"><span>Confianza cartográfica mínima</span><input id="minConfidence" type="number" min="0" max="100" step="5" value="20"><em>%</em></label>
         <button class="primary recalcAction" id="recalculate" disabled><span>↻</span> Recalcular misión</button>
         <div class="calcMeta"><b id="calcParams">—</b><small id="lastCalculated">Último cálculo: —</small></div>
       </section>
@@ -317,7 +351,8 @@
 
     <!-- Science details -->
     <div class="modulePanel" data-module-panel="science">
-      <section class="card"><div class="sectionTitle">RETORNO CIENTÍFICO</div><div class="emptyStateIcon">⌬</div><h3>Modelo científico preparado</h3><p>El siguiente paso del motor será asignar valor científico, actividades y muestras a cada objetivo sin mezclar esa lógica con el planificador de rutas.</p></section>
+      <section class="card"><div class="sectionTitle">RETORNO CIENTÍFICO</div><div class="metricGrid"><div><small>OBJETIVOS</small><strong id="scienceTargetCountDetail">0</strong></div><div><small>VALOR POTENCIAL</small><strong id="scienceValuePotentialDetail">0 pts</strong></div><div><small>VALOR INCLUIDO</small><strong data-mirror="scienceValueTotal">—</strong></div><div><small>EFICIENCIA</small><strong id="scienceEfficiencyDetail">—</strong></div></div><p>El motor prioriza objetivos opcionales según su valor científico frente al costo adicional de distancia, tiempo, dificultad y confianza cartográfica.</p></section>
+      <section class="card"><div class="sectionTitle">CÓMO AFECTA LA RUTA</div><div class="flowSteps"><span>1</span><p><b>Valor científico</b><small>Mayor valor aumenta la prioridad de un objetivo opcional.</small></p><span>2</span><p><b>Tiempo de trabajo</b><small>Se suma a la duración total de la EVA.</small></p><span>3</span><p><b>Obligatoriedad</b><small>Un objetivo obligatorio debe incluirse para que la misión sea válida.</small></p></div></section>
     </div>
 
     <!-- Terrain details -->
@@ -329,6 +364,11 @@
         <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
         <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
         <div class="row"><span>Margen operacional</span><b id="missionMargin">—</b></div>
+        <div class="row"><span>Transitabilidad media</span><b id="avgTransitability">—</b></div>
+        <div class="row"><span>Transitabilidad mínima</span><b id="minTransitabilityMetric">—</b></div>
+        <div class="row"><span>Confianza cartográfica media</span><b id="avgConfidence">—</b></div>
+        <div class="row"><span>Confianza mínima</span><b id="minConfidenceMetric">—</b></div>
+        <div class="row"><span>Valor científico incluido</span><b id="scienceValueTotal">—</b></div>
         <div class="row"><span>Fuente del relieve</span><b>MDEM200M · 200 m</b></div>
       </section>
       <section class="card"><div class="sectionTitle">PRINCIPIO DE SEGURIDAD</div><div class="stateLegend"><span class="safe">SEGURO</span><span class="unsafe">NO SEGURO</span><span class="unknown">DESCONOCIDO</span></div><p>La arquitectura reserva explícitamente el estado DESCONOCIDO para futuras capas de peligros y datos incompletos.</p></section>
@@ -337,7 +377,7 @@
     <!-- EVA details -->
     <div class="modulePanel" data-module-panel="eva">
       <section class="card evaStatusCard"><div class="sectionTitle">ESTADO EVA</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeStatus">SIN RUTA</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>RESERVA DE RETORNO</span><b data-mirror="missionMargin">—</b></div><div class="evaStatusLine"><span>TOPOGRAFÍA</span><b data-mirror="riskLabel">Sin evaluación</b></div></section>
-      <section class="card"><div class="sectionTitle">RECURSOS EVA</div><div class="resourcePlaceholder"><span>O₂</span><i></i><b>V28</b></div><div class="resourcePlaceholder"><span>BATERÍA</span><i></i><b>V28</b></div><div class="resourcePlaceholder"><span>CONTROL TÉRMICO</span><i></i><b>V28</b></div><p>Los recursos se separarán del motor de rutas para que el Planificador, el Navegador EVA y Control de misión consuman el mismo estado.</p></section>
+      <section class="card"><div class="sectionTitle">RECURSOS EVA</div><div class="resourcePlaceholder"><span>O₂</span><i></i><b>FUTURO</b></div><div class="resourcePlaceholder"><span>BATERÍA</span><i></i><b>FUTURO</b></div><div class="resourcePlaceholder"><span>CONTROL TÉRMICO</span><i></i><b>FUTURO</b></div><p>Los recursos se separarán del motor de rutas para que el Planificador, el Navegador EVA y Control de misión consuman el mismo estado.</p></section>
     </div>
 
     <!-- Control details -->
@@ -346,19 +386,17 @@
       <section class="card"><div class="sectionTitle">EVENTOS DE MISIÓN</div><div class="historyEmpty">Aún no existe un registro operativo en tiempo real. Este panel queda desacoplado para implementarlo sin alterar el mapa.</div></section>
     </div>
 
-    <!-- Analysis details -->
+    <!-- Results details -->
     <div class="modulePanel" data-module-panel="analysis">
-      <section class="card"><div class="sectionTitle">ANÁLISIS DE LA RUTA</div><div class="metricGrid"><div><small>RIESGO / DIFICULTAD</small><strong data-mirror="riskNumber">—</strong></div><div><small>PENDIENTE MEDIA</small><strong data-mirror="avgSlope">—</strong></div><div><small>SEGMENTOS</small><strong data-mirror="segments">—</strong></div><div><small>MARGEN</small><strong data-mirror="missionMargin">—</strong></div></div></section>
-      <section class="card"><div class="sectionTitle">SIGUIENTE CAPACIDAD</div><p>Perfil de elevación, comparación entre plan y recorrido real y análisis por tramo vivirán aquí, sin sobrecargar el Planificador de misión.</p></section>
-    </div>
-
-    <!-- Reports details -->
-    <div class="modulePanel" data-module-panel="reports">
-      <section class="card"><div class="sectionTitle">REPORTE ACTUAL</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF incluye los datos de planificación, parámetros, puntos, estrategias, métricas, tramos, coordenadas de ruta y limitaciones disponibles en la misión.</p></section>
+      <section class="card"><div class="sectionTitle">RESULTADO DE LA RUTA</div><div class="metricGrid"><div><small>RIESGO / DIFICULTAD</small><strong data-mirror="riskNumber">—</strong></div><div><small>PENDIENTE MEDIA</small><strong data-mirror="avgSlope">—</strong></div><div><small>TRANSITABILIDAD</small><strong data-mirror="avgTransitability">—</strong></div><div><small>CONFIANZA</small><strong data-mirror="avgConfidence">—</strong></div><div><small>VALOR CIENTÍFICO</small><strong data-mirror="scienceValueTotal">—</strong></div><div><small>MARGEN</small><strong data-mirror="missionMargin">—</strong></div></div></section>
+      <section class="card"><div class="sectionTitle">DOCUMENTO DE MISIÓN</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF incluye identificación de misión, parámetros, objetivos científicos, estrategias, métricas, tramos, coordenadas, nodos de ruta, fuentes y limitaciones.</p></section>
     </div>
 
     <!-- Settings details -->
-    <div class="modulePanel" data-module-panel="settings"><section class="card"><div class="sectionTitle">ARQUITECTURA</div><p>La interfaz modular mantiene el motor de cálculo compatible y permite extraer cada componente a archivos independientes sin rehacer toda la aplicación.</p></section></div>
+    <div class="modulePanel" data-module-panel="settings">
+      <section class="card"><div class="sectionTitle">PERFIL ACTIVO</div><div class="evaStatusLine"><span>MISIÓN</span><b id="settingsMissionSummary">Sin nombre definido</b></div><div class="evaStatusLine"><span>PARÁMETROS</span><b id="settingsDefaultsSummary">Valores de fábrica</b></div><div class="evaStatusLine"><span>HISTORIAL</span><b id="settingsHistorySummary">0 misiones</b></div></section>
+      <section class="card"><div class="sectionTitle">ALCANCE</div><p>La configuración se guarda únicamente en este navegador. Exportar la misión a JSON permite respaldarla o transferirla a otro equipo antes de recalcularla.</p></section>
+    </div>
   </aside>
 </main>
 
@@ -367,7 +405,7 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="script.js?v=27"></script>
-<script src="modules/module-shell.js?v=27"></script>
+<script src="script.js?v=29"></script>
+<script src="modules/module-shell.js?v=29"></script>
 </body>
 </html>

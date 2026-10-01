@@ -120,3 +120,54 @@ body{background:var(--bg);color:var(--text);font-size:14px}
 @media(max-width:1380px){:root{--rail:150px;--side:305px;--details:340px}.moduleNav{min-height:54px;padding:0 11px}.moduleNav small{font-size:8px}}
 @media(max-width:1120px){:root{--rail:78px;--side:285px;--details:0px}.appShell{grid-template-columns:var(--rail) var(--side) minmax(420px,1fr)}.moduleNav{width:62px;min-height:56px;flex-direction:column;justify-content:center;gap:4px;padding:4px}.moduleNav small{font-size:6px;text-align:center}.moduleNav span{width:auto;font-size:18px}.details{display:none}}
 @media(max-width:760px){:root{--rail:60px}.appShell{grid-template-columns:60px minmax(0,1fr)}.moduleRail{padding:8px 5px}.moduleNav{width:48px;min-height:50px;padding:3px}.moduleNav small{display:none}.moduleNav span{font-size:18px}.sidebar{left:60px;width:min(330px,calc(100vw - 60px))}.action{min-height:52px;font-size:10px}.mapActions button{min-width:40px;min-height:40px;padding:8px}.coordinateInline input,.coordinateInline select{min-height:44px}}
+
+/* V28 · Motor multicriterio */
+.constraintTitle{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.coordScienceGrid{grid-template-columns:1fr 1fr}
+.scienceValueEdit{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+.scienceValueEdit input{width:58px;min-height:30px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--text);font:800 12px/1 inherit;text-align:center;padding:4px 5px}
+.wpMeta{flex-wrap:wrap}
+@media (max-width:760px){.coordScienceGrid{grid-template-columns:1fr}.scienceValueEdit{width:100%;justify-content:flex-start}}
+
+/* V29 · Ajustes funcionales y responsivos */
+textarea{font:inherit;color:inherit}
+
+/* En 1366×768 el mapa y el panel derecho deben caber completos sin desbordamiento. */
+@media (max-width:1440px) and (min-width:1121px){
+  :root{--rail:132px;--side:270px;--details:286px}
+  .appShell{grid-template-columns:var(--rail) var(--side) minmax(420px,1fr) var(--details)}
+  .moduleRail{padding:9px 6px;gap:4px}
+  .moduleNav{min-height:50px;padding:0 9px;gap:8px}
+  .moduleNav span{width:22px;font-size:17px}.moduleNav small{font-size:7.2px;letter-spacing:.25px}
+  .sidebar{padding:13px}.details{padding:12px}
+  .topbar{padding:0 14px}.brandText small{font-size:7.2px}.brandText em{font-size:6.4px}
+  .card{padding:12px}.metricGrid{gap:7px}.metricGrid div{padding:9px}
+}
+
+/* Ciencia funcional */
+.scienceSummaryGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scienceEditorSection{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}
+.scienceObjectivesList{display:grid;gap:10px}
+.scienceObjectiveCard{border:1px solid #4b3a30;border-radius:11px;background:#1b1512;padding:12px}
+.scienceObjectiveHead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+.scienceObjectiveHead>div{min-width:0}.scienceObjectiveHead small{display:block;font-size:6.5px;letter-spacing:1px;color:#a88e7c}.scienceObjectiveHead b{display:block;margin-top:3px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.scienceObjectiveHead span{display:block;margin-top:3px;color:#8f7b6b;font-size:7px}
+.scienceRequired{display:flex;align-items:center;gap:5px;font-size:7px;color:#c9b7a7;white-space:nowrap}.scienceRequired input{width:16px;height:16px;accent-color:#b95f3b}
+.scienceObjectiveGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scienceObjectiveCard label:not(.scienceRequired){display:flex;flex-direction:column;gap:5px;color:#b9a493;font-size:7px;font-weight:800}
+.scienceObjectiveCard input,.scienceObjectiveCard select{width:100%;min-height:38px;padding:8px 9px;border:1px solid #5a463a;border-radius:8px;background:#120f0d;color:#f0e6db;outline:none;font-size:9px}
+.scienceObjectiveCard input:focus,.scienceObjectiveCard select:focus{border-color:#c8754e;box-shadow:0 0 0 2px #c8754e20}
+.scienceCategoryField,.scienceNotesField{margin-top:8px}.scienceActions{margin-top:12px}.resultsSave{margin-top:12px}
+
+/* Configuración funcional */
+.settingsGroup{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}
+.settingsField{display:flex;flex-direction:column;gap:6px;margin:9px 0;color:#c0aa98;font-size:8px;font-weight:800}
+.settingsField input,.settingsField textarea{width:100%;min-height:42px;padding:9px 10px;border:1px solid #5a463a;border-radius:9px;background:#120f0d;color:#f0e6db;outline:none;resize:vertical;font-size:10px}
+.settingsField textarea{min-height:72px;line-height:1.45}.settingsField input:focus,.settingsField textarea:focus{border-color:#c8754e;box-shadow:0 0 0 2px #c8754e20}
+.settingsHelp{font-size:8px;line-height:1.5;color:#a18d7d;margin:0 0 9px}.settingsStatus{margin-top:8px;padding:9px;border:1px solid #4a392f;border-radius:8px;background:#17120f;color:#a99583;font-size:7.5px;line-height:1.45}
+.dangerAction{border-color:#75453d!important;background:#281715!important;color:#e9c3ba!important}.dangerAction span{color:#df7d69!important}
+.resultsGrid{grid-template-columns:1fr 1fr}.resultsGrid div{min-height:56px}
+
+@media(max-width:760px){
+  .scienceSummaryGrid,.scienceObjectiveGrid,.resultsGrid{grid-template-columns:1fr}
+  .scienceObjectiveHead{flex-direction:column}.scienceRequired{white-space:normal}
+}

@@ -1,5 +1,5 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v27';
+  const MODULE_KEY = 'jezero-active-module-v29';
   const labels = {
     explorer: 'EXPLORAR',
     planner: 'PLANIFICADOR DE MISIÓN',
@@ -7,8 +7,7 @@
     terrain: 'TERRENO Y PELIGROS',
     eva: 'NAVEGADOR EVA',
     control: 'CONTROL DE MISIÓN',
-    analysis: 'ANÁLISIS',
-    reports: 'INFORMES',
+    analysis: 'RESULTADOS',
     settings: 'CONFIGURACIÓN'
   };
 
@@ -118,7 +117,8 @@
   }
 
   setupMirrors();
-  const initial = localStorage.getItem(MODULE_KEY);
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v28');
+  const initial = initialRaw === 'reports' ? 'analysis' : initialRaw;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});
 
   window.JEZERO_MODULES = Object.freeze({ activate: activateModule, labels:{...labels} });
