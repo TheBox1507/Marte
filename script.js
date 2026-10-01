@@ -20,6 +20,15 @@ let lastDerivedExtentKey = '';
 
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
+const uiLang = () => window.JEZERO_I18N?.getLanguage?.() || 'es';
+const ui = (es,en) => uiLang()==='en' ? en : es;
+const themeInfo = () => window.JEZERO_THEMES?.getThemeInfo?.(uiLang()) || {key:'nasa-classic',label:ui('NASA Clásico','NASA Classic'),colors:{success:'#54d6a5',accent2:'#55c8ff',accent:'#fc3d21',text:'#ffffff',bg:'#020611',primary2:'#1769d2'}};
+const themeColors = () => window.JEZERO_THEMES?.getColors?.() || themeInfo().colors;
+
+window.addEventListener('jezero:themechange',()=>{
+  markerLayer?.changed?.(); routeLayer?.changed?.(); knownLayer?.changed?.(); landingLayer?.changed?.();
+  if(typeof updateSettingsSummary==='function') updateSettingsSummary();
+});
 
 
 function buildLayers(){
@@ -94,29 +103,32 @@ function initMap(){
   populateReferenceLayers();
 }
 function pointStyle(kind,label){
-  const color = kind==='base' ? '#6dd1a6' : kind==='reference' ? '#9bb7d4' : kind==='optional' ? '#f2bb67' : '#ef7048';
+  const c=themeColors();
+  const color = kind==='base' ? c.success : kind==='reference' ? c.primary2 : kind==='optional' ? c.accent2 : c.accent;
   return new ol.style.Style({
-    image:new ol.style.Circle({ radius:9, fill:new ol.style.Fill({color}), stroke:new ol.style.Stroke({color:'#fff7ed',width:2}) }),
-    text:new ol.style.Text({ text:label||'P', offsetY:-19, fill:new ol.style.Fill({color:'#fff'}), stroke:new ol.style.Stroke({color:'#101010',width:4}), font:'800 11px Inter,Segoe UI,sans-serif' })
+    image:new ol.style.Circle({ radius:9, fill:new ol.style.Fill({color}), stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:2}) }),
+    text:new ol.style.Text({ text:label||'P', offsetY:-19, fill:new ol.style.Fill({color:c.text||'#ffffff'}), stroke:new ol.style.Stroke({color:c.bg||'#101010',width:4}), font:'800 11px Inter,Segoe UI,sans-serif' })
   });
 }
 function routeStyle(selected,kind){
-  const color = selected ? '#ff8a58' : kind==='risk' ? '#63d0a0' : kind==='distance' ? '#f0e6d5' : '#f0bf68';
+  const c=themeColors();
+  const color = selected ? c.accent : kind==='risk' ? c.success : kind==='distance' ? c.text : c.accent2;
   return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:selected?6:2.5, lineDash:selected?undefined:[9,8]}) });
 }
 
-
 function knownLocationStyle(feature){
-  const color = feature.get('category')==='Cráter / antiguo lago' ? '#d6b277' : '#8fc8d4';
+  const c=themeColors();
+  const color = feature.get('category')==='Cráter / antiguo lago' ? c.primary2 : c.accent2;
   return new ol.style.Style({
-    image:new ol.style.RegularShape({points:4,radius:8,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:'#fff8ef',width:1.5})}),
-    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-15,fill:new ol.style.Fill({color:'#f5eee5'}),stroke:new ol.style.Stroke({color:'#140f0c',width:3}),font:'800 9px Inter,Segoe UI,sans-serif'})
+    image:new ol.style.RegularShape({points:4,radius:8,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:1.5})}),
+    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-15,fill:new ol.style.Fill({color:c.text||'#ffffff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:3}),font:'800 9px Inter,Segoe UI,sans-serif'})
   });
 }
 function landingSiteStyle(feature){
+  const c=themeColors();
   return new ol.style.Style({
-    image:new ol.style.Circle({radius:7,fill:new ol.style.Fill({color:'#ed7049'}),stroke:new ol.style.Stroke({color:'#ffe3cc',width:2.5})}),
-    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-14,fill:new ol.style.Fill({color:'#fff3e6'}),stroke:new ol.style.Stroke({color:'#140f0c',width:3}),font:'900 9px Inter,Segoe UI,sans-serif'})
+    image:new ol.style.Circle({radius:7,fill:new ol.style.Fill({color:c.accent}),stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:2.5})}),
+    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-14,fill:new ol.style.Fill({color:c.text||'#ffffff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:3}),font:'900 9px Inter,Segoe UI,sans-serif'})
   });
 }
 function populateReferenceLayers(){
@@ -855,7 +867,7 @@ async function exportMissionPdf(mode){
     returnBase:$('returnBase').checked,
     params,
     mission:{
-      name:getMissionSettings().missionName || `Misión EVA · ${points.length} punto(s)`,
+      name:getMissionSettings().missionName || ui(`Misión EVA · ${points.length} punto(s)`,`EVA Mission · ${points.length} point(s)`),
       code:getMissionSettings().missionCode || '',
       crew:getMissionSettings().crew || '',
       notes:getMissionSettings().notes || '',
@@ -874,16 +886,17 @@ async function exportMissionPdf(mode){
     },
     software:{
       name:'JEZERO',
-      version:'V29',
-      interfaceTheme:'Tema actual · rediseño visual pendiente',
-      reportLanguage:'español'
+      version:'V31',
+      interfaceTheme:themeInfo().label,
+      themeKey:themeInfo().key,
+      reportLanguage:uiLang()
     },
     points,
     selected:pdfStrategyPayload(selected),
     strategies:['distance','balanced','risk'].map(k=>pdfStrategyPayload(currentMission[k])).filter(Boolean)
   };
   const res=await fetch('/api/mission-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)});
-  if(!res.ok) throw new Error(`No se pudo generar el PDF (${res.status}).`);
+  if(!res.ok) throw new Error(ui(`No se pudo generar el PDF (${res.status}).`,`PDF generation failed (${res.status}).`));
   const blob=await res.blob();
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -896,13 +909,14 @@ function saveHistoryEntry(mode){
   const items=getHistory(),now=new Date(),selected=currentMission?.[mode];
   const fingerprint=JSON.stringify({mode,returnBase:$('returnBase').checked,speed:Number($('speed').value),eva:Number($('evaTime').value),margin:Number($('returnMargin').value),maxSlope:Number($('maxSlopeLimit')?.value),minTransit:Number($('minTransitability')?.value),minConfidence:Number($('minConfidence')?.value),points:missionPoints.map(p=>[p.lat,p.lon,p.name,p.required,p.dwellMin,p.scienceValue,p.scienceCategory,p.scienceNotes])});
   const existing=items.find(x=>x.fingerprint===fingerprint);
-  const meta=getMissionSettings(); const entry={id:existing?.id||`m-${Date.now()}`,date:now.toISOString(),name:meta.missionName||`Misión ${now.toLocaleDateString('es-NI')} · ${missionPoints.length} puntos`,missionMeta:meta,mode,points:missionPoints.map(p=>({...p})),returnBase:$('returnBase').checked,speed:Number($('speed').value),evaTime:Number($('evaTime').value),returnMargin:Number($('returnMargin').value),maxSlopeLimit:Number($('maxSlopeLimit')?.value)||25,minTransitability:Number($('minTransitability')?.value)||25,minConfidence:Number($('minConfidence')?.value)||20,metrics:selected?.metrics||null,duration:selected?.duration||null,score:selected?.score??null,includedPoints:selected?.includedPoints||[],omittedOptional:selected?.omittedOptional||[],fingerprint};
+  const meta=getMissionSettings(); const entry={id:existing?.id||`m-${Date.now()}`,date:now.toISOString(),name:meta.missionName||ui(`Misión ${now.toLocaleDateString('es-NI')} · ${missionPoints.length} puntos`,`Mission ${now.toLocaleDateString('en-US')} · ${missionPoints.length} points`),missionMeta:meta,mode,points:missionPoints.map(p=>({...p})),returnBase:$('returnBase').checked,speed:Number($('speed').value),evaTime:Number($('evaTime').value),returnMargin:Number($('returnMargin').value),maxSlopeLimit:Number($('maxSlopeLimit')?.value)||25,minTransitability:Number($('minTransitability')?.value)||25,minConfidence:Number($('minConfidence')?.value)||20,metrics:selected?.metrics||null,duration:selected?.duration||null,score:selected?.score??null,includedPoints:selected?.includedPoints||[],omittedOptional:selected?.omittedOptional||[],fingerprint};
   const filtered=items.filter(x=>x.id!==entry.id); filtered.unshift(entry); setHistory(filtered);renderHistory();
 }
 function renderHistory(){
   const box=$('historyList'); if(!box)return; const items=getHistory();
-  if(!items.length){box.innerHTML='<div class="historyEmpty">Aún no hay misiones guardadas.</div>';return;}
-  box.innerHTML=items.map(item=>`<div class="historyItem"><div><strong>${escapeHtml(item.name)}</strong><small>${new Date(item.date).toLocaleString('es-NI',{dateStyle:'short',timeStyle:'short'})} · ${item.points.length} puntos · ${item.mode==='risk'?'Menor exposición':item.mode==='distance'?'Más directa':'Equilibrada'}</small></div><div class="historyActions"><button data-load="${item.id}" title="Cargar">Abrir</button><button data-delete="${item.id}" title="Eliminar">×</button></div></div>`).join('');
+  if(!items.length){box.innerHTML=`<div class="historyEmpty">${ui('Aún no hay misiones guardadas.','No saved missions yet.')}</div>`;return;}
+  const locale=uiLang()==='en'?'en-US':'es-NI';
+  box.innerHTML=items.map(item=>`<div class="historyItem"><div><strong>${escapeHtml(item.name)}</strong><small>${new Date(item.date).toLocaleString(locale,{dateStyle:'short',timeStyle:'short'})} · ${item.points.length} ${ui('puntos','points')} · ${item.mode==='risk'?ui('Menor exposición','Lower exposure'):item.mode==='distance'?ui('Más directa','Most direct'):ui('Equilibrada','Balanced')}</small></div><div class="historyActions"><button data-load="${item.id}" title="${ui('Cargar','Load')}">${ui('Abrir','Open')}</button><button data-delete="${item.id}" title="${ui('Eliminar','Delete')}">×</button></div></div>`).join('');
   box.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>loadHistory(b.dataset.load)); box.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteHistory(b.dataset.delete));
 }
 function loadHistory(id){
@@ -953,15 +967,17 @@ function applyDefaults(values,{notify=true}={}){
   const mapIds={speed:'speed',evaTime:'evaTime',returnMargin:'returnMargin',maxSlopeLimit:'maxSlopeLimit',minTransitability:'minTransitability',minConfidence:'minConfidence'};
   Object.entries(mapIds).forEach(([k,id])=>{ if($(id) && Number.isFinite(Number(values[k]))) $(id).value=Number(values[k]); });
   currentMission=null; routeLayer?.getSource()?.clear(); resetMetrics(); updatePlanningUI();
-  if(notify) showToast('Parámetros predeterminados aplicados al Planificador.');
+  if(notify) showToast(ui('Parámetros predeterminados aplicados al Planificador.','Default parameters applied to Mission Planner.'));
   return true;
 }
 function updateSettingsSummary(){
   const meta=getMissionSettings(), defs=getSavedDefaults(), hist=getHistory();
-  if($('settingsMissionSummary')) $('settingsMissionSummary').textContent=meta.missionName || meta.missionCode || 'Sin nombre definido';
-  if($('settingsDefaultsSummary')) $('settingsDefaultsSummary').textContent=defs ? `${defs.speed} km/h · EVA ${defs.evaTime} h · margen ${defs.returnMargin}%` : 'Valores de fábrica';
-  if($('settingsHistorySummary')) $('settingsHistorySummary').textContent=`${hist.length} ${hist.length===1?'misión':'misiones'}`;
-  if($('defaultsStatus')) $('defaultsStatus').textContent=defs ? `Guardados: ${defs.speed} km/h · EVA ${defs.evaTime} h · pendiente ≤ ${defs.maxSlopeLimit}° · transitabilidad ≥ ${defs.minTransitability} · confianza ≥ ${defs.minConfidence}%` : 'Usando valores de fábrica hasta que guardes un perfil.';
+  if($('settingsMissionSummary')) $('settingsMissionSummary').textContent=meta.missionName || meta.missionCode || ui('Sin nombre definido','No name defined');
+  if($('settingsDefaultsSummary')) $('settingsDefaultsSummary').textContent=defs ? `${defs.speed} km/h · EVA ${defs.evaTime} h · ${ui('margen','margin')} ${defs.returnMargin}%` : ui('Valores de fábrica','Factory values');
+  if($('settingsHistorySummary')) $('settingsHistorySummary').textContent=`${hist.length} ${hist.length===1?ui('misión','mission'):ui('misiones','missions')}`;
+  if($('settingsLanguageSummary')) $('settingsLanguageSummary').textContent=uiLang()==='en'?'English':'Español';
+  if($('settingsThemeSummary')) $('settingsThemeSummary').textContent=themeInfo().label;
+  if($('defaultsStatus')) $('defaultsStatus').textContent=defs ? `${ui('Guardados','Saved')}: ${defs.speed} km/h · EVA ${defs.evaTime} h · ${ui('pendiente','slope')} ≤ ${defs.maxSlopeLimit}° · ${ui('transitabilidad','traversability')} ≥ ${defs.minTransitability} · ${ui('confianza','confidence')} ≥ ${defs.minConfidence}%` : ui('Usando valores de fábrica hasta que guardes un perfil.','Using factory values until you save a profile.');
 }
 function initializeSettings(){
   const meta=getMissionSettings();
@@ -969,48 +985,60 @@ function initializeSettings(){
   if($('missionCodeSetting')) $('missionCodeSetting').value=meta.missionCode;
   if($('crewSetting')) $('crewSetting').value=meta.crew;
   if($('missionNotesSetting')) $('missionNotesSetting').value=meta.notes;
+  if($('languageSetting')){
+    $('languageSetting').value=uiLang();
+    $('languageSetting').addEventListener('change',()=>window.JEZERO_I18N?.setLanguage?.($('languageSetting').value));
+  }
+  window.addEventListener('jezero:languagechange',ev=>{
+    if($('languageSetting')) $('languageSetting').value=ev.detail?.language||uiLang();
+    updateSettingsSummary();
+    renderHistory();
+    renderScienceEditor();
+  });
   const defs=getSavedDefaults(); if(defs) applyDefaults(defs,{notify:false});
   ['missionNameSetting','missionCodeSetting','crewSetting','missionNotesSetting'].forEach(id=>$(id)?.addEventListener('input',()=>{
     setMissionSettings({missionName:$('missionNameSetting')?.value||'',missionCode:$('missionCodeSetting')?.value||'',crew:$('crewSetting')?.value||'',notes:$('missionNotesSetting')?.value||''});
   }));
   $('saveDefaultsBtn')?.addEventListener('click',()=>{
-    const defs=readOperationalDefaults(); localStorage.setItem(DEFAULTS_KEY,JSON.stringify(defs)); updateSettingsSummary(); showToast('Parámetros actuales guardados como predeterminados.');
+    const defs=readOperationalDefaults(); localStorage.setItem(DEFAULTS_KEY,JSON.stringify(defs)); updateSettingsSummary(); showToast(ui('Parámetros actuales guardados como predeterminados.','Current parameters saved as defaults.'));
   });
   $('restoreDefaultsBtn')?.addEventListener('click',()=>{
-    const defs=getSavedDefaults(); if(!defs) return showToast('Aún no has guardado parámetros predeterminados.'); applyDefaults(defs);
+    const defs=getSavedDefaults(); if(!defs) return showToast(ui('Aún no has guardado parámetros predeterminados.','You have not saved default parameters yet.')); applyDefaults(defs);
   });
   $('exportMissionJson')?.addEventListener('click',exportMissionJson);
   $('importMissionJson')?.addEventListener('click',()=>$('importMissionFile')?.click());
   $('importMissionFile')?.addEventListener('change',importMissionJsonFile);
   $('clearHistoryBtn')?.addEventListener('click',()=>{
-    if(!getHistory().length) return showToast('El historial ya está vacío.');
+    if(!getHistory().length) return showToast(ui('El historial ya está vacío.','History is already empty.'));
     if(!window.confirm('¿Borrar todo el historial local de misiones?')) return;
-    setHistory([]); renderHistory(); updateSettingsSummary(); showToast('Historial local borrado.');
+    setHistory([]); renderHistory(); updateSettingsSummary(); showToast(ui('Historial local borrado.','Local history cleared.'));
   });
   updateSettingsSummary();
 }
 function exportMissionJson(){
   const mode=document.querySelector('input[name="mode"]:checked')?.value||'balanced';
-  const payload={format:'JEZERO-MISSION',version:29,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),points:missionPoints,returnBase:$('returnBase')?.checked!==false,mode,params:readOperationalDefaults()};
+  const payload={format:'JEZERO-MISSION',version:31,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints,returnBase:$('returnBase')?.checked!==false,mode,params:readOperationalDefaults()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
   const code=(payload.missionMeta.missionCode||'mision').replace(/[^a-z0-9_-]+/gi,'-'); a.href=url; a.download=`jezero-${code}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1200);
-  showToast('Misión exportada a JSON.');
+  showToast(ui('Misión exportada a JSON.','Mission exported to JSON.'));
 }
 async function importMissionJsonFile(ev){
   const file=ev.target.files?.[0]; if(!file) return;
   try{
     const data=JSON.parse(await file.text());
-    if(data.format!=='JEZERO-MISSION'||!Array.isArray(data.points)) throw new Error('El archivo no es una misión JEZERO válida.');
+    if(data.format!=='JEZERO-MISSION'||!Array.isArray(data.points)) throw new Error(ui('El archivo no es una misión JEZERO válida.','The file is not a valid JEZERO mission.'));
     missionPoints=data.points.map((p,i)=>({
       lat:Number(p.lat),lon:Number(p.lon),name:String(p.name||`Punto ${i}`),type:p.type==='base'?'base':'science',required:i===0||p.type==='base'?true:Boolean(p.required),dwellMin:Math.max(0,Number(p.dwellMin)||0),scienceValue:clamp(Number(p.scienceValue??50),0,100),scienceCategory:String(p.scienceCategory||'geologia'),scienceNotes:String(p.scienceNotes||'')
     })).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
     if(data.missionMeta) setMissionSettings(data.missionMeta);
+    if(data.interface?.theme) window.JEZERO_THEMES?.setTheme?.(data.interface.theme);
+    if(data.interface?.language) window.JEZERO_I18N?.setLanguage?.(data.interface.language);
     if(data.params) applyDefaults(data.params,{notify:false});
     if($('returnBase')) $('returnBase').checked=data.returnBase!==false;
     const radio=document.querySelector(`input[name="mode"][value="${data.mode}"]`); if(radio) radio.checked=true;
     currentMission=null; selecting=false; routeLayer?.getSource()?.clear(); drawPointMarkers(); renderMissionList(); resetMetrics(); updatePlanningUI(); centerGlobal();
-    showToast(`Misión importada: ${missionPoints.length} punto(s). Recalcula para actualizar resultados.`);
-  }catch(err){showToast(err.message||'No se pudo importar la misión.');}
+    showToast(ui(`Misión importada: ${missionPoints.length} punto(s). Recalcula para actualizar resultados.`,`Mission imported: ${missionPoints.length} point(s). Recalculate to update results.`));
+  }catch(err){showToast(err.message||ui('No se pudo importar la misión.','The mission could not be imported.'));}
   finally{ev.target.value='';}
 }
 
@@ -1127,7 +1155,7 @@ $('mapInfoAdd')?.addEventListener('click',()=>{
 $('landingSiteSelect')?.addEventListener('change',e=>{if(e.target.value)focusReference('landing',e.target.value);});
 $('useSelectedLanding')?.addEventListener('click',()=>{
   const id=$('landingSiteSelect')?.value;
-  if(!id){showToast('Selecciona primero un sitio de aterrizaje.');return;}
+  if(!id){showToast(ui('Selecciona primero un sitio de aterrizaje.','Select a landing site first.'));return;}
   const f=landingLayer.getSource().getFeatures().find(x=>x.get('refId')===id); if(f) setBaseFromLanding(f);
 });
 $('planMode').onclick=newMission;
@@ -1143,13 +1171,13 @@ $('saveMission').onclick=async()=>{
     setBusy(true,'Guardando misión y generando informe PDF…');
     await exportMissionPdf(mode);
     setBusy(false,'MISIÓN GUARDADA · INFORME PDF DESCARGADO · NASA / USGS');
-    showToast('Misión guardada en el historial y PDF generado.');
+    showToast(ui('Misión guardada en el historial y PDF generado.','Mission saved to history and PDF generated.'));
   }catch(err){
     setBusy(false,'DATOS CARTOGRÁFICOS · NASA / USGS');
-    showToast(err.message||'No se pudo generar el PDF.');
+    showToast(err.message||ui('No se pudo generar el PDF.','The PDF could not be generated.'));
   }
 };
-$('addBase').onclick=()=>{if(!missionPoints.length){showToast('Crea al menos un punto para fijarlo como base.');return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0,scienceValue:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
+$('addBase').onclick=()=>{if(!missionPoints.length){showToast(ui('Crea al menos un punto para fijarlo como base.','Create at least one point before setting a base.'));return;}missionPoints[0]={...missionPoints[0],name:'Base de misión',type:'base',required:true,dwellMin:0,scienceValue:0};currentMission=null;drawPointMarkers();renderMissionList();updatePlanningUI();};
 document.querySelectorAll('[data-layer]').forEach(el=>el.onchange=()=>{
   const layer=el.dataset.layer, visible=el.checked;
   activeLayerNames[visible?'add':'delete'](layer);
@@ -1207,4 +1235,4 @@ window.addEventListener('jezero:modulechange',()=>{
   requestAnimationFrame(()=>{ map?.updateSize(); updateMapScale(); });
 });
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();initializeSettings();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast('No se pudo cargar la configuración.');console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();initializeSettings();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast(ui('No se pudo cargar la configuración.','Configuration could not be loaded.'));console.error(e);}})();

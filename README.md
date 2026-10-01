@@ -1,30 +1,15 @@
-# JEZERO V29
+# JEZERO V31
 
-Plataforma web modular para planificación de travesías científicas EVA sobre Marte.
+JEZERO es un planificador modular de travesías científicas EVA en Marte. V31 conserva el motor multicriterio existente y añade personalización visual real desde Configuración.
 
-## Módulos
-- Explorar
-- Planificar
-- Ciencia
-- Terreno y peligros
-- Navegador EVA
-- Control de misión
-- Resultados
-- Configuración
+## Temas visuales
+- **NASA Clásico:** azul NASA, rojo de misión y blanco técnico.
+- **Artemis Lunar:** grafito, plata lunar y azul frío.
+- **Espacio Profundo:** índigo, violeta y cian.
+- **Ciencia Marciana:** rojo mineral, cobre y azul de instrumentación.
+- **Aurora Teal:** verde azulado, menta y azul eléctrico.
+- **EVA Alto Contraste:** negro, blanco y amarillo para lectura operacional.
 
-## Motor de rutas
-El motor V29 conserva el A* multicriterio incorporado en V28: distancia, pendiente direccional, rugosidad, transitabilidad, confianza cartográfica, límites duros y valor científico.
+El tema se guarda en el navegador, se aplica al mapa y se refleja en los informes PDF. El idioma sigue siendo seleccionable entre español e inglés.
 
-## Ciencia
-Los objetivos científicos disponen de valor 0-100, tiempo de trabajo, obligatoriedad, categoría y notas. Valor, tiempo y obligatoriedad afectan el cálculo de la misión.
-
-## Configuración
-Permite identificar la misión, conservar valores operacionales predeterminados, importar/exportar misiones JSON y administrar el historial local.
-
-## Resultados y PDF
-Análisis e Informes se unificaron en Resultados. Desde allí se consultan las métricas, se guarda la misión y se genera el informe PDF completo.
-
-## Fuentes
-La aplicación mantiene MOLA/HRSC/MDEM200M y las fuentes NASA/USGS configuradas en versiones anteriores.
-
-> JEZERO sigue siendo una herramienta experimental de planificación y simulación. No certifica seguridad humana EVA.
+Consulta `ACTUALIZAR-GITHUB-V31.md` para aplicar únicamente los archivos necesarios.

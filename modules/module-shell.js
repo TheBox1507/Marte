@@ -1,5 +1,5 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v29';
+  const MODULE_KEY = 'jezero-active-module-v31';
   const labels = {
     explorer: 'EXPLORAR',
     planner: 'PLANIFICADOR DE MISIÓN',
@@ -10,6 +10,7 @@
     analysis: 'RESULTADOS',
     settings: 'CONFIGURACIÓN'
   };
+  const labelFor = name => window.JEZERO_I18N?.moduleLabel?.(name) || labels[name];
 
   const qsa = (sel, root=document) => [...root.querySelectorAll(sel)];
   const byId = id => document.getElementById(id);
@@ -56,7 +57,7 @@
       panel.classList.toggle('is-active', panel.dataset.modulePanel === name);
     });
 
-    const label = labels[name];
+    const label = labelFor(name);
     if (byId('activeModuleLabel')) byId('activeModuleLabel').textContent = label;
     if (byId('mapContext')) byId('mapContext').textContent = label;
     document.title = `JEZERO — ${label}`;
@@ -117,9 +118,11 @@
   }
 
   setupMirrors();
-  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v28');
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
   const initial = initialRaw === 'reports' ? 'analysis' : initialRaw;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});
+
+  window.addEventListener('jezero:languagechange',()=>activateModule(document.body.dataset.module||'planner',{save:false,openMobile:false}));
 
   window.JEZERO_MODULES = Object.freeze({ activate: activateModule, labels:{...labels} });
 })();
