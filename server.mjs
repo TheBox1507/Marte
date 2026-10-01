@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
       cors(res);
       res.writeHead(200, {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${String(report.fileName || 'mars-explorer-mision').replace(/[^a-zA-Z0-9._-]/g,'_')}.pdf"`,
+        'Content-Disposition': `attachment; filename="${String(report.fileName || 'jezero-mision').replace(/[^a-zA-Z0-9._-]/g,'_')}.pdf"`,
         'Cache-Control': 'no-store',
         'Content-Length': pdf.length
       });
@@ -91,4 +91,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log(`Mars Explorer disponible en el puerto ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`JEZERO disponible en el puerto ${PORT}`));

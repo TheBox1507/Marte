@@ -1,41 +1,64 @@
-# Mars Explorer V26 — Arquitectura modular
+# JEZERO V27 — Jezero Sand + interfaz en español + PDF completo
 
-Mars Explorer es una plataforma web experimental para planificar y analizar travesías científicas sobre Marte. V26 reorganiza la aplicación alrededor de un mapa persistente y módulos especializados, conservando el motor de rutas y el backend existentes.
+JEZERO es una plataforma web experimental para planificar y analizar travesías científicas EVA sobre Marte. V27 conserva la arquitectura modular y el motor de rutas de V26, pero mejora de forma importante la legibilidad de la interfaz y la documentación de misión.
 
 ## Módulos
 
-- **Explorer:** exploración global, referencias marcianas y sitios de aterrizaje.
-- **Mission Planner:** base, objetivos, secuencia, estrategias y parámetros de EVA.
-- **Science:** espacio desacoplado para valor científico, observaciones y muestras.
-- **Terrain & Hazards:** pendiente, rugosidad y futura transitabilidad/hazard map.
-- **EVA Navigator:** vista simplificada de navegación y retorno a base en modo simulación.
-- **Mission Control:** estructura para tripulación, telemetría, alertas y eventos.
-- **Analysis:** métricas y futura comparación plan vs. recorrido real.
-- **Reports:** historial local y exportación PDF.
-- **Settings:** configuración futura de fuentes, unidades y paquetes offline.
+- **Explorar:** cobertura global, referencias marcianas y sitios de aterrizaje.
+- **Planificador de misión:** base, objetivos, secuencia, estrategias y parámetros EVA.
+- **Ciencia:** espacio desacoplado para valor científico, observaciones y muestras.
+- **Terreno y peligros:** pendiente, rugosidad y futura transitabilidad.
+- **Navegador EVA:** vista simplificada de navegación y retorno a base en modo simulación.
+- **Control de misión:** estructura para tripulación, telemetría, alertas y eventos.
+- **Análisis:** métricas y futura comparación entre plan y recorrido real.
+- **Informes:** historial local y exportación PDF.
+- **Configuración:** fuentes, unidades y futuros paquetes sin conexión.
 
-## Cambio importante del motor V26
+## Tema Jezero Sand
 
-La malla del algoritmo A* ahora es un corredor **2D orientado al tramo**. En versiones anteriores, la longitud de las columnas dependía únicamente de la interpolación entre origen y destino; en recorridos casi norte-sur las columnas podían superponerse y limitar la capacidad del algoritmo para buscar desvíos laterales.
+La interfaz usa una paleta cálida inspirada en el terreno marciano:
 
-V26 genera un corredor perpendicular a la dirección del viaje, manteniendo un ancho adaptativo. Esto mejora la geometría de búsqueda sin cambiar el formato de las misiones guardadas.
+- Fondo principal: `#0D0C0B`
+- Paneles: `#17120F`
+- Panel secundario: `#211A16`
+- Cobre principal: `#B95F3B`
+- Arena: `#D4A574`
+- Texto: `#EEE5D8`
+- Verde de seguridad: `#70A684`
+- Rojo de alerta: `#D15F4F`
 
-## Elevación global
+Los colores de seguridad permanecen separados de los colores decorativos.
 
-La aplicación usa `MDEM200M` como `ElevationLayer` mediante ArcGIS Maps SDK for JavaScript. El muestreo numérico se realiza con `ElevationLayer.queryElevation()` en el navegador.
+## Interfaz V27
 
-Capas actuales:
+Los botones principales, controles de formulario y navegación modular son más grandes. En escritorio, la barra de módulos muestra el nombre completo de cada sección en lugar de abreviaturas crípticas. En pantallas pequeñas vuelve a un formato compacto por iconos.
 
-- Relieve MOLA + HRSC.
-- Pendiente calculada.
-- Rugosidad calculada.
-- Rutas calculadas.
-- Puntos de misión.
-- Sitios de aterrizaje y ubicaciones conocidas.
+La interfaz visible está en español. Se mantienen sin traducir únicamente nombres propios, siglas técnicas y denominaciones oficiales como NASA, USGS, MOLA, HRSC, DEM, Mars Trek y EVA.
 
-## Reportes PDF
+## PDF de misión V27
 
-`POST /api/mission-pdf` sigue generando el informe en el backend local. La migración modular no cambia `server.mjs`, `pdf-report.mjs`, `mars-elevation.js` ni el formato de datos.
+El informe PDF ahora recibe y documenta todos los datos disponibles que produce el motor actual, entre ellos:
+
+- identificación del informe y versión de JEZERO;
+- estrategia seleccionada;
+- estado operacional;
+- base, puntos obligatorios y opcionales;
+- todos los puntos con coordenadas y tiempos de permanencia;
+- parámetros de velocidad, duración EVA y margen de retorno;
+- duración total, tiempo de desplazamiento y tiempo en objetivos;
+- métricas topográficas completas;
+- línea base de objetivos obligatorios;
+- comparación de las tres estrategias;
+- detalle de todos los tramos de la ruta seleccionada;
+- objetivos opcionales omitidos;
+- fuentes de datos y limitaciones;
+- apéndice con cada nodo calculado de las tres rutas, incluyendo latitud, longitud y elevación disponible.
+
+JEZERO no inventa valores todavía no modelados. Oxígeno, batería, control térmico, radiación, comunicaciones y recursos fisiológicos se indican como no modelados en V27.
+
+## Cambio importante del motor heredado de V26
+
+La malla A* usa un corredor bidimensional orientado al tramo, permitiendo desvíos laterales incluso en recorridos casi norte-sur. Se conserva esta corrección en V27.
 
 ## Ejecutar localmente
 
@@ -47,4 +70,4 @@ Después abre `http://localhost:8000`.
 
 ## Alcance de seguridad
 
-Mars Explorer sigue siendo un prototipo de planificación y simulación. El índice topográfico y el modo EVA no certifican seguridad humana ni sustituyen un sistema de navegación xEVA validado.
+JEZERO sigue siendo un prototipo de planificación y simulación. El índice topográfico y el modo EVA no certifican seguridad humana ni sustituyen un sistema de navegación xEVA validado.

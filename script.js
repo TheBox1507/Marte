@@ -618,37 +618,96 @@ function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2
 function getHistory(){ try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}catch{return[];} }
 function setHistory(items){localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,12)));}
 
+function pdfPointPayload(p){
+  if(!p) return null;
+  return {
+    lat:Number(p.lat),
+    lon:Number(p.lon),
+    name:p.name,
+    type:p.type,
+    required:Boolean(p.required),
+    dwellMin:Number(p.dwellMin)||0,
+    elevationM:Number.isFinite(Number(p.elevationM))?Number(p.elevationM):null
+  };
+}
+
+function pdfLegPayload(leg){
+  if(!leg) return null;
+  return {
+    from:pdfPointPayload(leg.from),
+    to:pdfPointPayload(leg.to),
+    durationHours:Number(leg.durationHours),
+    metrics:{...(leg.metrics||{})},
+    path:(leg.path||[]).map((p,index)=>({
+      index:index+1,
+      lat:Number(p.lat),
+      lon:Number(p.lon),
+      elevationM:Number.isFinite(Number(p.elevationM))?Number(p.elevationM):null
+    }))
+  };
+}
+
 function pdfStrategyPayload(m){
   if(!m) return null;
   return {
     mode:m.mode,
-    duration:m.duration,
-    score:m.score,
-    overBudget:m.overBudget,
-    availableHours:m.availableHours,
-    dwellMinutes:m.dwellMinutes,
-    metrics:m.metrics,
-    includedPoints:(m.includedPoints||m.sequence||[]).map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
-    omittedOptional:(m.omittedOptional||[]).map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
-    legs:(m.legs||[]).map(leg=>({
-      from:{lat:leg.from?.lat,lon:leg.from?.lon,name:leg.from?.name,type:leg.from?.type,required:leg.from?.required,dwellMin:Number(leg.from?.dwellMin)||0},
-      to:{lat:leg.to?.lat,lon:leg.to?.lon,name:leg.to?.name,type:leg.to?.type,required:leg.to?.required,dwellMin:Number(leg.to?.dwellMin)||0},
-      durationHours:leg.durationHours,
-      metrics:leg.metrics
-    }))
+    strategyDescription:m.strategyDescription||'',
+    duration:Number(m.duration),
+    score:Number.isFinite(Number(m.score))?Number(m.score):null,
+    overBudget:Boolean(m.overBudget),
+    availableHours:Number(m.availableHours),
+    dwellMinutes:Number(m.dwellMinutes)||0,
+    params:{...(m.params||{})},
+    metrics:{...(m.metrics||{})},
+    sequence:(m.sequence||[]).map(pdfPointPayload).filter(Boolean),
+    includedPoints:(m.includedPoints||m.sequence||[]).map(pdfPointPayload).filter(Boolean),
+    omittedOptional:(m.omittedOptional||[]).map(pdfPointPayload).filter(Boolean),
+    requiredBaseline:m.requiredBaseline?{
+      duration:Number(m.requiredBaseline.duration),
+      dwellMinutes:Number(m.requiredBaseline.dwellMinutes)||0,
+      score:Number.isFinite(Number(m.requiredBaseline.score))?Number(m.requiredBaseline.score):null,
+      metrics:{...(m.requiredBaseline.metrics||{})},
+      sequence:(m.requiredBaseline.sequence||[]).map(pdfPointPayload).filter(Boolean)
+    }:null,
+    legs:(m.legs||[]).map(pdfLegPayload).filter(Boolean)
   };
 }
 
 async function exportMissionPdf(mode){
   const selected=currentMission?.[mode];
   if(!selected) return false;
+  const now=new Date();
+  const points=missionPoints.map(pdfPointPayload).filter(Boolean);
+  const params=normalizeParams();
   const report={
-    fileName:`mars-explorer-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}`,
-    generatedAt:new Date().toISOString(),
+    fileName:`jezero-mision-${now.toISOString().slice(0,19).replace(/[T:]/g,'-')}`,
+    reportId:`JEZERO-${now.toISOString().replace(/[-:TZ.]/g,'').slice(0,14)}`,
+    generatedAt:now.toISOString(),
     selectedMode:mode,
     returnBase:$('returnBase').checked,
-    params:normalizeParams(),
-    points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type,required:p.required,dwellMin:Number(p.dwellMin)||0})),
+    params,
+    mission:{
+      name:`Misión EVA · ${points.length} punto(s)`,
+      totalPoints:points.length,
+      requiredPoints:points.filter((p,i)=>i===0||p.required).length,
+      optionalPoints:points.filter((p,i)=>i>0&&!p.required).length,
+      base:points.find(p=>p.type==='base')||points[0]||null,
+      selectedStrategy:mode,
+      calculationTimestamp:lastCalculatedAt?.toISOString?.()||null
+    },
+    dataSources:{
+      elevation:'MDEM200M mediante ArcGIS ElevationLayer',
+      cartography:'NASA / USGS / ESA / HRSC',
+      map:'NASA Mars Trek / capas configuradas en JEZERO',
+      marsRadiusKm:MARTIAN_RADIUS
+    },
+    software:{
+      name:'JEZERO',
+      version:'V27',
+      interfaceTheme:'Jezero Sand',
+      reportLanguage:'español'
+    },
+    points,
     selected:pdfStrategyPayload(selected),
     strategies:['distance','balanced','risk'].map(k=>pdfStrategyPayload(currentMission[k])).filter(Boolean)
   };

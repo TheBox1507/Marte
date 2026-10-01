@@ -1,6 +1,6 @@
 {
-  "name": "mars-explorer-final",
-  "version": "2.0.0",
+  "name": "jezero",
+  "version": "2.1.0",
   "private": true,
   "description": "Plataforma modular para planificación y análisis de travesías científicas EVA en Marte.",
   "type": "module",

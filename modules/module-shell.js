@@ -1,15 +1,15 @@
 (() => {
-  const MODULE_KEY = 'mars-explorer-active-module-v26';
+  const MODULE_KEY = 'jezero-active-module-v27';
   const labels = {
-    explorer: 'EXPLORER',
-    planner: 'MISSION PLANNER',
-    science: 'SCIENCE',
-    terrain: 'TERRAIN & HAZARDS',
-    eva: 'EVA NAVIGATOR',
-    control: 'MISSION CONTROL',
-    analysis: 'ANALYSIS',
-    reports: 'REPORTS',
-    settings: 'SETTINGS'
+    explorer: 'EXPLORAR',
+    planner: 'PLANIFICADOR DE MISIÓN',
+    science: 'CIENCIA',
+    terrain: 'TERRENO Y PELIGROS',
+    eva: 'NAVEGADOR EVA',
+    control: 'CONTROL DE MISIÓN',
+    analysis: 'ANÁLISIS',
+    reports: 'INFORMES',
+    settings: 'CONFIGURACIÓN'
   };
 
   const qsa = (sel, root=document) => [...root.querySelectorAll(sel)];
@@ -60,7 +60,7 @@
     const label = labels[name];
     if (byId('activeModuleLabel')) byId('activeModuleLabel').textContent = label;
     if (byId('mapContext')) byId('mapContext').textContent = label;
-    document.title = `Mars Explorer — ${label}`;
+    document.title = `JEZERO — ${label}`;
     if (save) localStorage.setItem(MODULE_KEY, name);
 
     const sidebar = document.querySelector('.sidebar');
@@ -92,7 +92,7 @@
     }
     const returnBase = byId('returnBase');
     if (returnBase) returnBase.checked = true;
-    // En V26 RETURN HOME usa el motor de planificación existente. El motor EVA dinámico
+    // El botón REGRESAR A BASE usa el motor de planificación existente. El motor EVA dinámico
     // se implementará aparte; no se presenta como navegación certificada en tiempo real.
     const button = byId('recalculate') && !byId('recalculate').disabled ? byId('recalculate') : byId('calculate');
     if (button && !button.disabled) {
