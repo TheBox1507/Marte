@@ -6,17 +6,22 @@ const GLOBAL_BBOX = { minLon: -180, maxLon: 180, minLat: -90, maxLat: 90 };
 const HISTORY_KEY = 'mars-explorer-mission-history-v2';
 const SETTINGS_KEY = 'jezero-settings-v29';
 const DEFAULTS_KEY = 'jezero-operational-defaults-v29';
-const PANEL_STATE_KEY = 'jezero-panel-state-v33';
-const MAP_VIEW_KEY = 'jezero-map-view-v33';
+const PANEL_STATE_KEY = 'jezero-panel-state-v34';
+const MAP_VIEW_KEY = 'jezero-map-view-v34';
+const BASE_MAP_KEY = 'jezero-base-map-v34';
 
 let D;
-let map, markerLayer, routeLayer, molaLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
+let map, markerLayer, routeLayer, molaLayer, imageryLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
 let missionPoints = [];
 let selecting = false;
 let currentMission = null;
 let busy = false;
 let lastCalculatedAt = null;
-let activeLayerNames = new Set(['mola','route','points','known','landing']);
+let activeLayerNames = new Set(['route','points','known','landing']);
+let nomenclatureTimer = null;
+let nomenclatureAbort = null;
+let lastNomenclatureKey = '';
+let nomenclatureRequestSeq = 0;
 let derivedRefreshToken = 0;
 let lastDerivedExtentKey = '';
 
@@ -38,17 +43,25 @@ function buildLayers(){
   const globalExtent = [-180,-90,180,90];
   const resolutions = Array.from({length:13},(_,z)=>0.703125/Math.pow(2,z));
   const tileGrid = new ol.tilegrid.TileGrid({extent:globalExtent,origin:[-180,90],resolutions,tileSize:256});
-  const xyz = (url,maxZoom=12) => new ol.layer.Tile({
-    className:'ol-layer jezero-base-map-layer',
+  const xyz = (url,maxZoom=12,extraClass='') => new ol.layer.Tile({
+    className:`ol-layer jezero-base-map-layer ${extraClass}`.trim(),
     source:new ol.source.XYZ({projection,tileGrid,maxZoom,wrapX:true,crossOrigin:'anonymous',url,transition:0}),
     opacity:1,zIndex:1
   });
 
-  // Base cartográfica global. El DEM numérico se consulta por backend solo
-  // cuando el motor necesita elevación/pendiente/rugosidad.
-  molaLayer = xyz(D.map.globalTile, 12);
+  // Dos mapas base: imagen global Viking VIS y topografía MOLA/HRSC.
+  // El DEM numérico se consulta por backend solo cuando el motor necesita
+  // elevación/pendiente/rugosidad; cambiar el mapa base no cambia la ciencia.
+  imageryLayer = xyz(D.map.realTile || 'https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg', Number(D.map.realMaxZoom||7), 'jezero-real-map-layer');
+  imageryLayer.set('layerId','viking-vis-global');
+  imageryLayer.setZIndex(1);
+  imageryLayer.setVisible(true);
+
+  molaLayer = xyz(D.map.globalTile, 12, 'jezero-topography-map-layer');
   molaLayer.set('layerId','mola-global');
+  molaLayer.setZIndex(2);
   molaLayer.setOpacity(1);
+  molaLayer.setVisible(false);
 
   slopeLayer = new ol.layer.Vector({source:new ol.source.Vector(),zIndex:4,visible:false});
   roughnessLayer = new ol.layer.Vector({source:new ol.source.Vector(),zIndex:5,visible:false});
@@ -58,13 +71,15 @@ function buildLayers(){
   knownLayer = new ol.layer.Vector({
     source:new ol.source.Vector(),
     style: feature => knownLocationStyle(feature),
-    zIndex:7
+    zIndex:7,
+    declutter:true
   });
   knownLayer.set('layerId','known-locations');
   landingLayer = new ol.layer.Vector({
     source:new ol.source.Vector(),
     style: feature => landingSiteStyle(feature),
-    zIndex:8
+    zIndex:8,
+    declutter:true
   });
   landingLayer.set('layerId','landing-sites');
   markerLayer = new ol.layer.Vector({
@@ -75,7 +90,7 @@ function buildLayers(){
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
   routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
 
-  return { projection, layers:[molaLayer,slopeLayer,roughnessLayer,knownLayer,landingLayer,routeLayer,markerLayer] };
+  return { projection, layers:[imageryLayer,molaLayer,slopeLayer,roughnessLayer,knownLayer,landingLayer,routeLayer,markerLayer] };
 }
 function setLayerStatus(name,text,cls='ready'){ const el=document.querySelector(`[data-layer-status="${name}"]`); if(el){el.textContent=text;el.className=`layerStatus ${cls}`;} }
 function markLayerLoaded(name){ setLayerStatus(name,'ACTIVA','live'); }
@@ -96,7 +111,7 @@ function initMap(){
   map = new ol.Map({ target:'map', layers, view:new ol.View({ projection, center:[0,0], zoom:1.5, resolutions:Array.from({length:13},(_,z)=>0.703125/Math.pow(2,z)) }), controls:[] });
   map.on('pointermove', evt=>{ const c=evt.coordinate; if(c) $('coordReadout').textContent=`${formatLat(c[1])} · ${formatLon(c[0])}`; });
   map.on('singleclick', onMapClick);
-  map.on('moveend', ()=>{ updateMapScale(); if(slopeLayer?.getVisible()||roughnessLayer?.getVisible()) refreshDerivedLayers(false); });
+  map.on('moveend', ()=>{ updateMapScale(); if(slopeLayer?.getVisible()||roughnessLayer?.getVisible()) refreshDerivedLayers(false); scheduleNomenclatureRefresh(); });
   $('zoomIn').onclick=()=>map.getView().setZoom(Math.min(12,map.getView().getZoom()+.7));
   $('zoomOut').onclick=()=>map.getView().setZoom(Math.max(0,map.getView().getZoom()-.7));
   $('center').onclick=()=>centerGlobal();
@@ -143,10 +158,24 @@ function routeStyle(selected,kind){
 
 function knownLocationStyle(feature){
   const c=themeColors();
+  const zoom=Number(map?.getView?.().getZoom?.()||0);
+  const minZoom=Number(feature.get('minZoom') ?? (feature.get('dynamicNomenclature') ? 3.0 : 1.8));
+  if(zoom < minZoom) return null;
+  const dynamic=Boolean(feature.get('dynamicNomenclature'));
   const color = feature.get('category')==='Cráter / antiguo lago' ? c.primary2 : c.accent2;
+  const radius=dynamic ? 3.3 : 6.2;
+  const image=dynamic
+    ? new ol.style.Circle({radius,fill:new ol.style.Fill({color:hexAlpha(color,'d9')}),stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','cc'),width:1})})
+    : new ol.style.RegularShape({points:4,radius,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:1.2})});
   return new ol.style.Style({
-    image:new ol.style.RegularShape({points:4,radius:8,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:1.5})}),
-    text:new ol.style.Text({text:feature.get('label')||'',offsetY:-15,fill:new ol.style.Fill({color:c.text||'#ffffff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:3}),font:'800 9px Inter,Segoe UI,sans-serif'})
+    image,
+    text:new ol.style.Text({
+      text:feature.get('label')||'',offsetY:dynamic?-11:-14,
+      fill:new ol.style.Fill({color:c.text||'#ffffff'}),
+      stroke:new ol.style.Stroke({color:c.bg||'#020611',width:dynamic?2.4:3}),
+      font:`${dynamic?700:850} ${dynamic?8.5:9.5}px Inter,Segoe UI,sans-serif`,
+      overflow:false,padding:[2,3,2,3]
+    })
   });
 }
 function landingSiteStyle(feature){
@@ -161,7 +190,7 @@ function populateReferenceLayers(){
   const ks=knownLayer.getSource(); ks.clear();
   (D.knownLocations||[]).forEach(x=>ks.addFeature(new ol.Feature({
     geometry:new ol.geom.Point([x.lon,x.lat]), refKind:'known', refId:x.id, label:x.name,
-    name:x.name, category:x.category, lat:x.lat, lon:x.lon, description:x.description, source:x.source, sourceUrl:x.sourceUrl
+    name:x.name, category:x.category, lat:x.lat, lon:x.lon, minZoom:x.minZoom, dynamicNomenclature:false, description:x.description, source:x.source, sourceUrl:x.sourceUrl
   })));
   const ls=landingLayer.getSource(); ls.clear();
   (D.landingSites||[]).forEach(x=>ls.addFeature(new ol.Feature({
@@ -171,6 +200,79 @@ function populateReferenceLayers(){
   const select=$('landingSiteSelect');
   if(select){ select.innerHTML='<option value="">Selecciona un sitio de aterrizaje…</option>'+(D.landingSites||[]).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} · ${escapeHtml(x.site)}</option>`).join(''); }
 }
+function normalizeGazetteerLon(lon){
+  let x=Number(lon);
+  if(!Number.isFinite(x)) return 0;
+  while(x>180) x-=360;
+  while(x<-180) x+=360;
+  return x;
+}
+function removeDynamicNomenclature(){
+  const source=knownLayer?.getSource?.(); if(!source) return;
+  source.getFeatures().filter(f=>f.get('dynamicNomenclature')).forEach(f=>source.removeFeature(f));
+}
+function addGazetteerFeatures(features=[]){
+  const source=knownLayer?.getSource?.(); if(!source) return 0;
+  removeDynamicNomenclature();
+  let added=0;
+  for(const x of features){
+    const lat=Number(x.lat), lon=normalizeGazetteerLon(x.lon);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||!x.name) continue;
+    const diameter=Number(x.diameterKm||0);
+    const zoom=Number(map?.getView?.().getZoom?.()||3);
+    const minZoom=diameter>=500?1.8:diameter>=150?2.4:diameter>=50?3.0:diameter>=15?3.8:4.6;
+    source.addFeature(new ol.Feature({
+      geometry:new ol.geom.Point([lon,lat]),refKind:'known',refId:`iau-${x.id||added}`,label:x.name,name:x.name,
+      category:x.featureType||'Nomenclatura IAU',lat,lon,minZoom:Math.min(minZoom,Math.max(1.8,zoom-.35)),dynamicNomenclature:true,
+      description:x.description||`${x.featureType||'Accidente geográfico'}${diameter?` · diámetro aprox. ${diameter.toFixed(1)} km`:''}.`,
+      source:'USGS Gazetteer / IAU',sourceUrl:x.sourceUrl||'https://planetarynames.wr.usgs.gov/Page/MARS/target'
+    }));
+    added++;
+  }
+  knownLayer?.changed?.();
+  return added;
+}
+async function refreshNomenclatureLabels(force=false){
+  if(!map || !knownLayer?.getVisible?.()) return;
+  const zoom=Number(map.getView().getZoom()||0);
+  if(zoom<2.25){ removeDynamicNomenclature(); setLayerStatus('known','NOMBRES GLOBALES','live'); return; }
+  const size=map.getSize(); if(!size) return;
+  const extent=map.getView().calculateExtent(size);
+  let west=normalizeGazetteerLon(extent[0]), east=normalizeGazetteerLon(extent[2]);
+  const south=clamp(Number(extent[1]),-90,90), north=clamp(Number(extent[3]),-90,90);
+  const rounded=v=>Math.round(v*4)/4;
+  const key=[rounded(west),rounded(east),rounded(south),rounded(north),Math.floor(zoom*2)/2].join('|');
+  if(!force && key===lastNomenclatureKey) return;
+  lastNomenclatureKey=key;
+  const seq=++nomenclatureRequestSeq;
+  nomenclatureAbort?.abort?.(); nomenclatureAbort=new AbortController();
+  setLayerStatus('known','CARGANDO IAU…','loading');
+  const ranges = west<=east ? [[west,east]] : [[west,180],[-180,east]];
+  try{
+    const all=[];
+    for(const [w,e] of ranges){
+      const q=new URLSearchParams({west:String(w),east:String(e),south:String(south),north:String(north),zoom:String(zoom)});
+      const res=await fetch(`${D?.map?.nomenclatureApi||'/api/mars-nomenclature'}?${q}`,{signal:nomenclatureAbort.signal,cache:'no-store'});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload=await res.json();
+      if(Array.isArray(payload.features)) all.push(...payload.features);
+    }
+    if(seq!==nomenclatureRequestSeq) return;
+    const dedup=[...new Map(all.map(x=>[String(x.id||x.name),x])).values()];
+    const added=addGazetteerFeatures(dedup);
+    setLayerStatus('known',added?`${added} NOMBRES`:'BASE LOCAL','live');
+  }catch(err){
+    if(err?.name==='AbortError') return;
+    console.warn('USGS nomenclature unavailable; using local fallback.',err);
+    removeDynamicNomenclature();
+    setLayerStatus('known','BASE LOCAL','ready');
+  }
+}
+function scheduleNomenclatureRefresh(delay=360){
+  clearTimeout(nomenclatureTimer);
+  nomenclatureTimer=setTimeout(()=>refreshNomenclatureLabels(false),delay);
+}
+
 function focusReference(refKind,refId){
   const layer=refKind==='landing'?landingLayer:knownLayer; const f=layer?.getSource().getFeatures().find(x=>x.get('refId')===refId); if(!f) return;
   map.getView().animate({center:f.getGeometry().getCoordinates(),zoom:Math.max(map.getView().getZoom(),2.8),duration:450}); showReferencePopup(f);
@@ -1024,7 +1126,7 @@ async function exportMissionPdf(mode){
     },
     software:{
       name:'JEZERO',
-      version:'V33',
+      version:'V34',
       interfaceTheme:themeInfo().label,
       themeKey:themeInfo().key,
       reportLanguage:uiLang()
@@ -1328,10 +1430,6 @@ function syncLayerControls(layer,visible){
 function applyLayerVisibility(layer,visible){
   activeLayerNames[visible?'add':'delete'](layer);
   syncLayerControls(layer,visible);
-  if(layer==='mola'){
-    molaLayer?.setVisible(visible);
-    setLayerStatus('mola',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
-  }
   if(layer==='slope'){
     slopeLayer?.setVisible(visible);
     slopeLayer?.getSource().clear();
@@ -1351,6 +1449,7 @@ function applyLayerVisibility(layer,visible){
   if(layer==='known'){
     knownLayer?.setVisible(visible);
     setLayerStatus('known',visible?'ACTIVA':'OCULTA',visible?'live':'ready');
+    if(visible) scheduleNomenclatureRefresh(80); else removeDynamicNomenclature();
   }
   if(layer==='landing'){
     landingLayer?.setVisible(visible);
@@ -1371,6 +1470,29 @@ document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{if(
 $('returnBase').onchange=()=>{currentMission=null;updatePlanningUI();};
 ['speed','evaTime','returnMargin','maxSlopeLimit','minTransitability','minConfidence'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
 function showToast(msg){$('toast').textContent=msg;$('toast').classList.remove('hide');clearTimeout(showToast.t);showToast.t=setTimeout(()=>$('toast').classList.add('hide'),5000);}
+
+const BASE_MAP_MODES = new Set(['viking','mola','hybrid']);
+function updateBaseMapStatus(mode){
+  document.querySelectorAll('[data-base-status]').forEach(el=>{
+    const active = el.dataset.baseStatus===mode || (mode==='hybrid' && el.dataset.baseStatus==='hybrid');
+    el.textContent=active?'ACTIVA':'DISPONIBLE';
+    el.className=`layerStatus ${active?'live':'ready'}`;
+  });
+  document.querySelectorAll('[data-base-map]').forEach(el=>{el.checked=el.dataset.baseMap===mode;});
+  if($('baseMapMode') && $('baseMapMode').value!==mode) $('baseMapMode').value=mode;
+}
+function setBaseMapMode(mode,{persist=true}={}){
+  if(!BASE_MAP_MODES.has(mode)) mode='viking';
+  imageryLayer?.setVisible(mode==='viking'||mode==='hybrid');
+  molaLayer?.setVisible(mode==='mola'||mode==='hybrid');
+  imageryLayer?.setOpacity(1);
+  molaLayer?.setOpacity(mode==='hybrid'?0.34:1);
+  updateBaseMapStatus(mode);
+  document.querySelector('.mapPanel')?.setAttribute('data-base-map',mode);
+  if(persist) localStorage.setItem(BASE_MAP_KEY,mode);
+  requestAnimationFrame(()=>map?.render?.());
+}
+document.querySelectorAll('[data-base-map]').forEach(el=>el.addEventListener('change',()=>{if(el.checked)setBaseMapMode(el.dataset.baseMap);}));
 
 const MAP_VISUAL_MODES = new Set(['geology','relief','mono','eva']);
 function setMapVisualMode(mode,{persist=true}={}){
@@ -1400,14 +1522,24 @@ function setPanelState(left,right,{persist=true}={}){
 }
 function initPanelControls(){
   let state={left:true,right:true};
-  try{state={...state,...JSON.parse(localStorage.getItem(PANEL_STATE_KEY)||'{}')};}catch{}
+  try{state={...state,...JSON.parse(localStorage.getItem(PANEL_STATE_KEY)||localStorage.getItem('jezero-panel-state-v33')||'{}')};}catch{}
   setPanelState(state.left!==false,state.right!==false,{persist:false});
   $('toggleLeftPanel')?.addEventListener('click',()=>{const s=currentPanelState();setPanelState(!s.left,s.right);});
   $('toggleRightPanel')?.addEventListener('click',()=>{const s=currentPanelState();setPanelState(s.left,!s.right);});
   $('focusMap')?.addEventListener('click',()=>{const s=currentPanelState();const any=s.left||s.right;setPanelState(!any,!any);});
 }
+window.JEZERO_PANELS = Object.freeze({
+  get: currentPanelState,
+  set: (left,right)=>setPanelState(Boolean(left),Boolean(right)),
+  toggleBoth: ()=>{const s=currentPanelState();const any=s.left||s.right;setPanelState(!any,!any);},
+  open: ()=>setPanelState(true,true),
+  close: ()=>setPanelState(false,false)
+});
+
 function initMapVisualControls(){
-  setMapVisualMode(localStorage.getItem(MAP_VIEW_KEY)||'geology',{persist:false});
+  setBaseMapMode(localStorage.getItem(BASE_MAP_KEY)||localStorage.getItem('jezero-base-map-v33')||'viking',{persist:false});
+  $('baseMapMode')?.addEventListener('change',e=>setBaseMapMode(e.target.value));
+  setMapVisualMode(localStorage.getItem(MAP_VIEW_KEY)||localStorage.getItem('jezero-map-view-v33')||'geology',{persist:false});
   $('mapVisualMode')?.addEventListener('change',e=>setMapVisualMode(e.target.value));
   const drawer=$('mapLayerDrawer'), toggle=$('toggleLayerDrawer');
   const close=()=>{drawer?.classList.remove('is-open');drawer?.setAttribute('aria-hidden','true');toggle?.setAttribute('aria-expanded','false');};
@@ -1415,7 +1547,7 @@ function initMapVisualControls(){
   toggle?.addEventListener('click',()=>drawer?.classList.contains('is-open')?close():open());
   $('closeLayerDrawer')?.addEventListener('click',close);
   document.addEventListener('pointerdown',e=>{if(drawer?.classList.contains('is-open')&&!drawer.contains(e.target)&&e.target!==toggle)close();});
-  ['mola','slope','roughness','route','points','known','landing'].forEach(layer=>{
+  ['slope','roughness','route','points','known','landing'].forEach(layer=>{
     const source=document.querySelector(`[data-layer="${layer}"]`); if(source) syncLayerControls(layer,source.checked);
   });
 }
@@ -1432,4 +1564,4 @@ window.addEventListener('jezero:modulechange',()=>{
   requestAnimationFrame(()=>{ map?.updateSize(); updateMapScale(); });
 });
 
-(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();initPanelControls();initMapVisualControls();initializeSettings();setLayerStatus('mola','ACTIVA','live');setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast(ui('No se pudo cargar la configuración.','Configuration could not be loaded.'));console.error(e);}})();
+(async()=>{try{D=await fetch(DATA_URL).then(r=>r.json());await prepareLayerSources();initMap();initPanelControls();initMapVisualControls();initializeSettings();setLayerStatus('route','ACTIVA','live');setLayerStatus('points','ACTIVA','live');renderMissionList();renderHistory();updatePlanningUI();populateReferenceLayers();setLayerStatus('known','ACTIVA','live');scheduleNomenclatureRefresh(250);setLayerStatus('landing','ACTIVA','live');$('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}catch(e){showToast(ui('No se pudo cargar la configuración.','Configuration could not be loaded.'));console.error(e);}})();

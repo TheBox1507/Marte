@@ -1,18 +1,53 @@
-# JEZERO V33 — Legibilidad + Mapa Expandible
+# JEZERO V34 — Real Mars + Nomenclatura + UI adaptable
 
-V33 es una actualización incremental sobre JEZERO V32. Mantiene el motor multicriterio, el DEM, las rutas, el análisis científico, los temas y el PDF de terreno, pero mejora la lectura y el espacio cartográfico.
+JEZERO V34 mejora la cartografía y corrige los problemas de legibilidad observados al abrir los paneles laterales, sin cambiar el motor A*, el DEM ni el análisis de terreno/PDF incorporado en V32.
 
-## Cambios principales
+## Novedades principales
 
-- Tipografía general ampliada para pantallas de 1366×768 y superiores.
-- Textos, estados y valores pueden envolver línea para evitar superposiciones.
-- Panel izquierdo y derecho se pueden ocultar por separado.
-- Botón **Mapa** permite ocultar/restaurar ambos paneles de una vez.
-- El estado de los paneles se recuerda en el navegador.
-- Nuevo botón **Capas** disponible directamente sobre el mapa.
-- Control rápido de mapa base, pendiente, rugosidad, rutas, objetivos, referencias y aterrizajes.
-- Cuatro vistas visuales del raster: Geología, Relieve, Monocromo científico y EVA.
-- Las vistas visuales solo cambian la representación del mapa base; no alteran cálculos, elevaciones, rutas ni métricas.
-- OpenLayers recalcula el tamaño del mapa al ocultar o restaurar paneles.
+- Nuevo mapa base **Marte real · Viking VIS**, servido desde NASA Mars Trek.
+- Se conserva **MOLA + HRSC** y se agrega un modo **Híbrido imagen + relieve**.
+- Nomenclatura marciana oficial **IAU / USGS** cargada progresivamente según la zona visible y el zoom.
+- 49 referencias globales locales como respaldo cuando no hay conexión con el Gazetteer.
+- 10 aterrizajes operacionales de referencia: los nueve sitios exitosos de NASA presentes en la cartografía de NASA más Zhurong/Tianwen-1.
+- Paneles laterales con scrollbar temático oscuro.
+- HUD y toolbar adaptables al espacio real entre paneles.
+- Textos y métricas permiten salto de línea para evitar superposición.
+- Los botones inferiores también abren/cerran las opciones laterales del módulo activo.
+- Se mantiene el botón MAPA para ocultar ambos paneles de una sola vez.
 
-No se añaden frameworks ni dependencias nuevas.
+## Capas
+
+El menú CAPAS permite elegir el mapa base:
+
+- **Marte real · Viking VIS**
+- **Topografía MOLA + HRSC**
+- **Híbrido imagen + relieve**
+
+Además permite activar o desactivar:
+
+- pendiente;
+- rugosidad;
+- rutas EVA;
+- objetivos;
+- nombres oficiales IAU / USGS;
+- aterrizajes.
+
+## Nombres de Marte sin inflar la aplicación
+
+V34 no incrusta un archivo enorme con toda la nomenclatura. Cuando el usuario se acerca, el servidor consulta el Gazetteer of Planetary Nomenclature para la ventana cartográfica visible. A escala global solo se muestran referencias mayores; al aumentar el zoom se incorporan accidentes geográficos cada vez más pequeños.
+
+Si la consulta externa falla, JEZERO conserva las referencias globales locales y muestra el estado `BASE LOCAL`.
+
+## Compatibilidad
+
+V34 mantiene:
+
+- motor A* y estrategias de ruta;
+- MDEM200M para elevación;
+- análisis de pendiente, rugosidad, transitabilidad e incertidumbre;
+- PDF con análisis del terreno y perfil de elevación;
+- temas configurables;
+- interfaz Español / English;
+- JSON de misión e historial.
+
+Consulta `ACTUALIZAR-GITHUB-V34.md` antes de reemplazar archivos.

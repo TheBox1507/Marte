@@ -1,6 +1,6 @@
 (() => {
-  const KEY = 'jezero-language-v31';
-  const LEGACY_KEY = 'jezero-language-v30';
+  const KEY = 'jezero-language-v34';
+  const LEGACY_KEY = 'jezero-language-v31';
   const VALID = new Set(['es','en']);
 
   const ES_EN = {
@@ -10,6 +10,17 @@
     'MAPA Y CAPAS':'MAP & LAYERS','Cartografía científica · NASA / USGS':'Scientific cartography · NASA / USGS',
     'Exploración cartográfica':'Cartographic exploration','Navega por Marte, consulta referencias y activa las capas de terreno que alimentan la planificación EVA.':'Navigate Mars, inspect references and enable terrain layers used by EVA planning.',
     'CAPAS DEL MAPA':'MAP LAYERS','VISTA DEL MAPA':'MAP VIEW','Representación visual; no modifica los cálculos':'Visual representation; it does not change calculations','Estilo cartográfico':'Map style','Mapa base':'Basemap','Geología · color MOLA':'Geology · MOLA color','Relieve · contraste':'Relief · contrast','Monocromo científico':'Scientific monochrome','EVA · baja luminosidad':'EVA · low light','Capas':'Layers','Paneles':'Panels','CARTOGRAFÍA':'CARTOGRAPHY','TERRENO':'TERRAIN','Corredor y rutas EVA':'EVA corridor & routes','Alternativas calculadas':'Calculated alternatives','Base y objetivos':'Base & targets','Simbología JEZERO':'JEZERO symbology',
+    'MAPA BASE':'BASEMAP',
+    'Marte real · Viking VIS':'Real Mars · Viking VIS','Mosaico fotográfico global · NASA / JPL / USGS':'Global photographic mosaic · NASA / JPL / USGS',
+    'Topografía MOLA + HRSC':'MOLA + HRSC topography','Relieve científico coloreado':'Color-coded scientific relief',
+    'Híbrido imagen + relieve':'Hybrid image + relief','Viking VIS con topografía semitransparente':'Viking VIS with semi-transparent topography',
+    'DISPONIBLE':'AVAILABLE','Nombres oficiales IAU / USGS':'Official IAU / USGS names','Nomenclatura por zona y nivel de zoom':'Nomenclature by area and zoom level',
+    'Aterrizajes en Marte':'Mars landings','Misiones exitosas y referencias históricas':'Successful missions and historical references',
+    'Topografía · MOLA + HRSC':'Topography · MOLA + HRSC','Híbrido · imagen + relieve':'Hybrid · image + relief',
+    'Nombres IAU / USGS':'IAU / USGS names','Se cargan por zona al acercar':'Loaded by area as you zoom in',
+    'Aterrizajes':'Landings','NASA + Zhurong y referencias históricas':'NASA + Zhurong and historical references',
+    'FUENTES':'SOURCES','Viking VIS / MOLA: NASA Mars Trek · Nombres: USGS Gazetteer / IAU':'Viking VIS / MOLA: NASA Mars Trek · Names: USGS Gazetteer / IAU',
+    'NOMBRES GLOBALES':'GLOBAL NAMES','BASE LOCAL':'LOCAL FALLBACK',
     'Construir misión':'Build mission','Base, objetivos y rutas':'Base, targets and routes',
     'TIMELINE DE MISIÓN':'MISSION TIMELINE','EVA NAVIGATOR':'EVA NAVIGATOR','NAVEGACIÓN / PLAN ACTIVO':'NAVIGATION / ACTIVE PLAN',
     'RESULTADOS DE MISIÓN':'MISSION RESULTS','Ruta, ciencia y terreno en una sola lectura':'Route, science and terrain in one view',
@@ -67,7 +78,7 @@
     'CARGANDO…':'LOADING…','ERROR':'ERROR','Bajo':'Low','Moderado':'Moderate','Alto':'High','Muy alto':'Very high','ninguno':'none'
   };
   const EN_ES = Object.fromEntries(Object.entries(ES_EN).map(([a,b]) => [b,a]));
-  let storedLanguage = localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY);
+  let storedLanguage = localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || localStorage.getItem('jezero-language-v30');
   let current = VALID.has(storedLanguage) ? storedLanguage : 'es';
   let mutating = false;
 

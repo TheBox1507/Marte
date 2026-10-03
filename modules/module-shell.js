@@ -1,5 +1,5 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v33';
+  const MODULE_KEY = 'jezero-active-module-v34';
   const labels = {
     explorer: 'MAPA',
     planner: 'MISIÓN',
@@ -72,11 +72,26 @@
   qsa('[data-module-target]').forEach(btn => btn.addEventListener('click', () => {
     const name = btn.dataset.moduleTarget;
     const sidebar = document.querySelector('.sidebar');
-    if (document.body.dataset.module === name && sidebar && window.matchMedia('(max-width:760px)').matches) {
-      sidebar.classList.toggle('mobile-open');
+    const sameModule = document.body.dataset.module === name;
+
+    if (sidebar && window.matchMedia('(max-width:760px)').matches) {
+      if (sameModule) { sidebar.classList.toggle('mobile-open'); return; }
+      activateModule(name);
+      return;
+    }
+
+    // V34: los botones inferiores son también interruptores de sus opciones.
+    // Primera pulsación: activa el módulo y abre ambos paneles.
+    // Segunda pulsación sobre el mismo módulo: cierra ambos paneles.
+    // Una pulsación posterior vuelve a abrirlos sin perder el módulo activo.
+    const panels = window.JEZERO_PANELS;
+    if (sameModule && panels) {
+      const state = panels.get();
+      if (state.left || state.right) panels.close(); else panels.open();
       return;
     }
     activateModule(name);
+    panels?.open?.();
   }));
 
   qsa('[data-jump-module]').forEach(btn => btn.addEventListener('click', () => activateModule(btn.dataset.jumpModule)));
@@ -116,7 +131,7 @@
   }
 
   setupMirrors();
-  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v32') || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v33') || localStorage.getItem('jezero-active-module-v32') || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
   const migrated = initialRaw === 'reports' ? 'analysis' : initialRaw === 'terrain' ? 'explorer' : initialRaw === 'control' ? 'eva' : initialRaw;
   const initial = migrated;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});
