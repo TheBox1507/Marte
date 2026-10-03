@@ -1,5 +1,5 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v32';
+  const MODULE_KEY = 'jezero-active-module-v33';
   const labels = {
     explorer: 'MAPA',
     planner: 'MISIÓN',
@@ -116,7 +116,7 @@
   }
 
   setupMirrors();
-  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v32') || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
   const migrated = initialRaw === 'reports' ? 'analysis' : initialRaw === 'terrain' ? 'explorer' : initialRaw === 'control' ? 'eva' : initialRaw;
   const initial = migrated;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});

@@ -9,7 +9,7 @@
     'MISIÓN':'MISSION','MAPA':'MAP','CONFIG.':'SETTINGS',
     'MAPA Y CAPAS':'MAP & LAYERS','Cartografía científica · NASA / USGS':'Scientific cartography · NASA / USGS',
     'Exploración cartográfica':'Cartographic exploration','Navega por Marte, consulta referencias y activa las capas de terreno que alimentan la planificación EVA.':'Navigate Mars, inspect references and enable terrain layers used by EVA planning.',
-    'CAPAS DEL MAPA':'MAP LAYERS','CARTOGRAFÍA':'CARTOGRAPHY','TERRENO':'TERRAIN','Corredor y rutas EVA':'EVA corridor & routes','Alternativas calculadas':'Calculated alternatives','Base y objetivos':'Base & targets','Simbología JEZERO':'JEZERO symbology',
+    'CAPAS DEL MAPA':'MAP LAYERS','VISTA DEL MAPA':'MAP VIEW','Representación visual; no modifica los cálculos':'Visual representation; it does not change calculations','Estilo cartográfico':'Map style','Mapa base':'Basemap','Geología · color MOLA':'Geology · MOLA color','Relieve · contraste':'Relief · contrast','Monocromo científico':'Scientific monochrome','EVA · baja luminosidad':'EVA · low light','Capas':'Layers','Paneles':'Panels','CARTOGRAFÍA':'CARTOGRAPHY','TERRENO':'TERRAIN','Corredor y rutas EVA':'EVA corridor & routes','Alternativas calculadas':'Calculated alternatives','Base y objetivos':'Base & targets','Simbología JEZERO':'JEZERO symbology',
     'Construir misión':'Build mission','Base, objetivos y rutas':'Base, targets and routes',
     'TIMELINE DE MISIÓN':'MISSION TIMELINE','EVA NAVIGATOR':'EVA NAVIGATOR','NAVEGACIÓN / PLAN ACTIVO':'NAVIGATION / ACTIVE PLAN',
     'RESULTADOS DE MISIÓN':'MISSION RESULTS','Ruta, ciencia y terreno en una sola lectura':'Route, science and terrain in one view',
