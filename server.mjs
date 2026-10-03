@@ -80,7 +80,7 @@ async function fetchMarsNomenclature({west,east,south,north,zoom}) {
   const timer = setTimeout(()=>controller.abort(), 9000);
   try {
     const response = await fetch(NOMENCLATURE_ENDPOINT, {
-      method:'POST', headers:{'content-type':'application/x-www-form-urlencoded','user-agent':'JEZERO-EVA-Mission-System/34'}, body, signal:controller.signal
+      method:'POST', headers:{'content-type':'application/x-www-form-urlencoded','user-agent':'JEZERO-EVA-Mission-System/35'}, body, signal:controller.signal
     });
     if (!response.ok) throw new Error(`USGS nomenclature HTTP ${response.status}`);
     const xml = await response.text();

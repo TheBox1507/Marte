@@ -29,7 +29,7 @@ const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
 const uiLang = () => window.JEZERO_I18N?.getLanguage?.() || 'es';
 const ui = (es,en) => uiLang()==='en' ? en : es;
-const themeInfo = () => window.JEZERO_THEMES?.getThemeInfo?.(uiLang()) || {key:'nasa-classic',label:ui('NASA Clásico','NASA Classic'),colors:{success:'#54d6a5',accent2:'#55c8ff',accent:'#fc3d21',text:'#ffffff',bg:'#020611',primary2:'#1769d2'}};
+const themeInfo = () => window.JEZERO_THEMES?.getThemeInfo?.(uiLang()) || {key:'nasa-classic',label:ui('NASA Clásico','NASA Classic'),colors:{success:'#54d6a5',warning:'#ffc857',danger:'#fc3d21',accent2:'#55c8ff',accent:'#fc3d21',text:'#ffffff',bg:'#020611',primary2:'#1769d2'}};
 const themeColors = () => window.JEZERO_THEMES?.getColors?.() || themeInfo().colors;
 
 window.addEventListener('jezero:themechange',()=>{
@@ -908,6 +908,135 @@ function renderTerrainProfile(mission){
     <text x="${W-padX}" y="${H-3}" text-anchor="end">${maxKm.toFixed(2)} km</text>
   </svg>`;
 }
+
+function analyticsSeries(mission){
+  const nodes=missionPathNodes(mission);
+  const out=[];
+  let km=0,prev=null;
+  for(const node of nodes){
+    if(prev) km+=haversine(prev,node);
+    out.push({
+      km,
+      lat:Number(node.lat),lon:Number(node.lon),
+      elevationM:Number.isFinite(Number(node.elevationM))?Number(node.elevationM):null,
+      slope:Number.isFinite(Number(node.signedSlopeDeg))?Number(node.signedSlopeDeg):Number.isFinite(Number(node.slopeDeg))?Number(node.slopeDeg):null,
+      transit:Number.isFinite(Number(node.transitability))?Number(node.transitability):Number.isFinite(Number(node.baseTransitability))?Number(node.baseTransitability):null,
+      confidence:Number.isFinite(Number(node.edgeConfidence))?Number(node.edgeConfidence):Number.isFinite(Number(node.dataConfidence))?Number(node.dataConfidence):null,
+      roughness:Number.isFinite(Number(node.localRoughnessDeg))?Number(node.localRoughnessDeg):null
+    });
+    prev=node;
+  }
+  return out;
+}
+function analyticsDistanceBins(series,key,classify,labels){
+  const values=Object.fromEntries(labels.map(x=>[x,0])); let total=0;
+  for(let i=1;i<series.length;i++){
+    const dist=haversine(series[i-1],series[i]);
+    const value=series[i][key]; if(!Number.isFinite(dist)||dist<=0||!Number.isFinite(value)) continue;
+    const label=classify(value); if(label in values){ values[label]+=dist; total+=dist; }
+  }
+  return labels.map(label=>({label,km:values[label],pct:total?values[label]/total*100:0}));
+}
+function v35BarRows(rows,{suffix='%',digits=0}={}){
+  return `<div class="v35Bars">${rows.map(r=>`<div class="v35BarRow"><span>${escapeHtml(r.label)}</span><div class="v35BarTrack"><div class="v35BarFill" style="width:${clamp(Number(r.pct)||0,0,100).toFixed(1)}%"></div></div><strong>${Number(r.pct||0).toFixed(digits)}${suffix}</strong></div>`).join('')}</div>`;
+}
+function renderAnalyticsProfile(mission){
+  const host=$('analyticsProfileChart'); if(!host) return;
+  const series=analyticsSeries(mission);
+  if(series.length<2){host.innerHTML=`<div class="chartEmpty">${ui('Calcula una misión para generar el perfil multicapa.','Calculate a mission to generate the multi-layer profile.')}</div>`;return;}
+  const c=themeColors(); const W=980,H=310,L=74,R=20,T=18,B=24,plotW=W-L-R,maxKm=Math.max(.001,series.at(-1).km);
+  const elev=series.filter(p=>Number.isFinite(p.elevationM)); const minE=Math.min(...elev.map(p=>p.elevationM)),maxE=Math.max(...elev.map(p=>p.elevationM)),spanE=Math.max(1,maxE-minE);
+  const tracks=[
+    {key:'elevationM',label:ui('ELEVACIÓN','ELEVATION'),top:22,h:82,min:minE,max:maxE,color:c.accent,fmt:v=>`${Math.round(v)} m`},
+    {key:'slope',label:ui('PENDIENTE','SLOPE'),top:116,h:50,min:-Math.max(15,mission?.metrics?.maxSlopeDeg||15),max:Math.max(15,mission?.metrics?.maxSlopeDeg||15),color:c.warning,fmt:v=>`${v.toFixed(1)}°`},
+    {key:'transit',label:ui('TRANSIT.','TRAV.'),top:184,h:42,min:0,max:100,color:c.success,fmt:v=>`${Math.round(v)}/100`},
+    {key:'confidence',label:ui('CONFIANZA','CONFIDENCE'),top:244,h:38,min:0,max:100,color:c.accent2,fmt:v=>`${Math.round(v)}%`}
+  ];
+  const x=p=>L+p.km/maxKm*plotW;
+  const y=(v,t)=>t.top+t.h-(v-t.min)/Math.max(.001,t.max-t.min)*t.h;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" data-v35-profile role="img" aria-label="${ui('Perfil multicapa de la ruta','Multi-layer route profile')}">`;
+  for(let g=0;g<=5;g++){const gx=L+plotW*g/5;svg+=`<line class="chartGrid" x1="${gx}" y1="${T}" x2="${gx}" y2="${H-B}"/><text class="chartLabel" x="${gx}" y="${H-6}" text-anchor="middle">${(maxKm*g/5).toFixed(1)} km</text>`;}
+  tracks.forEach((t,ti)=>{
+    svg+=`<text class="chartTitle" x="8" y="${t.top+10}">${t.label}</text><line class="chartAxis" x1="${L}" y1="${t.top+t.h}" x2="${W-R}" y2="${t.top+t.h}"/>`;
+    const pts=series.filter(p=>Number.isFinite(p[t.key])).map(p=>`${x(p).toFixed(1)},${y(p[t.key],t).toFixed(1)}`).join(' ');
+    if(pts) svg+=`<polyline points="${pts}" fill="none" stroke="${t.color}" stroke-width="${ti===0?2.8:2}" vector-effect="non-scaling-stroke"/>`;
+    const topLabel=t.key==='elevationM'?`${Math.round(t.max)} m`:t.key==='slope'?`+${Math.round(t.max)}°`:'100';
+    const bottomLabel=t.key==='elevationM'?`${Math.round(t.min)} m`:t.key==='slope'?`${Math.round(t.min)}°`:'0';
+    svg+=`<text class="chartLabel" x="${L-7}" y="${t.top+8}" text-anchor="end">${topLabel}</text><text class="chartLabel" x="${L-7}" y="${t.top+t.h}" text-anchor="end">${bottomLabel}</text>`;
+  });
+  svg+=`<line id="v35ProfileCursor" class="chartCursor" x1="${L}" x2="${L}" y1="${T}" y2="${H-B}" visibility="hidden"/><circle id="v35ProfileDot" class="chartTarget" r="4" cx="${L}" cy="${tracks[0].top}" visibility="hidden"/><rect class="chartHit" x="${L}" y="${T}" width="${plotW}" height="${H-T-B}"/></svg>`;
+  host.innerHTML=svg;
+  const svgEl=host.querySelector('svg'),cursor=$('v35ProfileCursor'),dot=$('v35ProfileDot'),tip=$('analyticsProfileTooltip');
+  const move=e=>{
+    const box=svgEl.getBoundingClientRect(); const frac=clamp((e.clientX-box.left)/Math.max(1,box.width),0,1); const targetKm=frac*maxKm;
+    let best=series[0]; for(const p of series) if(Math.abs(p.km-targetKm)<Math.abs(best.km-targetKm)) best=p;
+    const xx=x(best),yy=Number.isFinite(best.elevationM)?y(best.elevationM,tracks[0]):tracks[0].top+tracks[0].h;
+    cursor.setAttribute('x1',xx);cursor.setAttribute('x2',xx);cursor.setAttribute('visibility','visible'); dot.setAttribute('cx',xx);dot.setAttribute('cy',yy);dot.setAttribute('visibility','visible');
+    if(tip){tip.hidden=false;tip.style.left=`${Math.min(host.clientWidth-220,Math.max(8,e.clientX-host.getBoundingClientRect().left+12))}px`;tip.style.top='44px';tip.innerHTML=`<b>${best.km.toFixed(2)} km</b><br>${ui('Elevación','Elevation')}: ${Number.isFinite(best.elevationM)?Math.round(best.elevationM)+' m':'—'}<br>${ui('Pendiente','Slope')}: ${Number.isFinite(best.slope)?best.slope.toFixed(1)+'°':'—'}<br>${ui('Transitabilidad','Traversability')}: ${Number.isFinite(best.transit)?Math.round(best.transit)+'/100':'—'}<br>${ui('Confianza','Confidence')}: ${Number.isFinite(best.confidence)?Math.round(best.confidence)+'%':'—'}`;}
+  };
+  svgEl.addEventListener('pointermove',move); svgEl.addEventListener('pointerleave',()=>{cursor.setAttribute('visibility','hidden');dot.setAttribute('visibility','hidden');if(tip)tip.hidden=true;});
+}
+function renderAnalyticsDistributions(mission){
+  const s=analyticsSeries(mission);
+  const slope=analyticsDistanceBins(s,'slope',v=>{v=Math.abs(v);return v<5?'0–5°':v<10?'5–10°':v<15?'10–15°':'>15°';},['0–5°','5–10°','10–15°','>15°']);
+  const transit=analyticsDistanceBins(s,'transit',v=>v>=80?ui('Segura','Safe'):v>=60?ui('Moderada','Moderate'):v>=40?ui('Difícil','Difficult'):ui('Crítica','Critical'),[ui('Segura','Safe'),ui('Moderada','Moderate'),ui('Difícil','Difficult'),ui('Crítica','Critical')]);
+  if($('analyticsSlopeChart')) $('analyticsSlopeChart').innerHTML=s.length>1?v35BarRows(slope):'<div class="chartEmpty">Sin datos.</div>';
+  if($('analyticsTransitChart')) $('analyticsTransitChart').innerHTML=s.length>1?v35BarRows(transit):'<div class="chartEmpty">Sin datos.</div>';
+}
+function renderAnalyticsEva(mission){
+  const host=$('analyticsEvaChart'); if(!host) return;
+  if(!mission){host.innerHTML='<div class="chartEmpty">Sin datos.</div>';return;}
+  const available=mission.availableHours ?? availableMissionHours(mission.params||normalizeParams());
+  const dwell=Math.max(0,(Number(mission.dwellMinutes)||0)/60); const travel=Math.max(0,(Number(mission.duration)||0)-dwell); const reserve=Math.max(0,available-Number(mission.duration||0)); const exceed=Math.max(0,Number(mission.duration||0)-available); const total=Math.max(.001,travel+dwell+reserve+exceed);
+  const parts=[{label:ui('TRÁNSITO','TRAVEL'),v:travel,bg:'var(--theme-primary-2)'},{label:ui('CIENCIA','SCIENCE'),v:dwell,bg:'var(--theme-accent)'},{label:ui('RESERVA','RESERVE'),v:reserve,bg:'var(--theme-success)'},{label:ui('EXCESO','OVERRUN'),v:exceed,bg:'var(--theme-danger)'}].filter(x=>x.v>.0001);
+  host.innerHTML=`<div class="v35EvaBudget">${parts.map(x=>`<span style="width:${x.v/total*100}%;background:${x.bg}" title="${x.label}: ${formatHours(x.v)}">${x.v/total*100>13?Math.round(x.v/total*100)+'%':''}</span>`).join('')}</div><div class="v35EvaLegend">${parts.map(x=>`<div><span>${x.label}</span><b>${formatHours(x.v)}</b></div>`).join('')}</div>`;
+}
+function renderAnalyticsScience(mission){
+  const host=$('analyticsScienceChart'); if(!host) return;
+  if(!mission?.legs?.length){host.innerHTML='<div class="chartEmpty">Sin datos.</div>';return;}
+  const pts=[{km:0,value:0,label:'BASE'}]; let km=0,val=0;
+  mission.legs.forEach((leg,i)=>{km+=Number(leg.metrics?.distanceKm)||0;const to=leg.to||{};if(to.type!=='base') val+=Number(to.scienceValue)||0;pts.push({km,value:val,label:to.type==='base'?'HOME':`S${String(i+1).padStart(2,'0')}`});});
+  const W=480,H=165,L=40,R=18,T=16,B=28,maxKm=Math.max(.001,pts.at(-1).km),maxV=Math.max(1,mission.scienceValuePotential||val||1),c=themeColors(); const x=p=>L+p.km/maxKm*(W-L-R), y=p=>T+(maxV-p.value)/maxV*(H-T-B);
+  const coords=pts.map(p=>`${x(p).toFixed(1)},${y(p).toFixed(1)}`).join(' ');
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}"><line class="chartAxis" x1="${L}" y1="${T}" x2="${L}" y2="${H-B}"/><line class="chartAxis" x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}"/><polyline points="${coords}" fill="none" stroke="${c.accent}" stroke-width="3"/>${pts.map(p=>`<circle cx="${x(p)}" cy="${y(p)}" r="4" fill="${c.accent2}"/><text class="chartLabel" x="${x(p)}" y="${H-8}" text-anchor="middle">${p.label}</text>`).join('')}<text class="chartLabel" x="${L-6}" y="${T+7}" text-anchor="end">${Math.round(maxV)}</text><text class="chartValue" x="${W-R}" y="${T+10}" text-anchor="end">${Math.round(val)} pts</text></svg>`;
+}
+function renderAnalyticsRoutes(selected){
+  const host=$('analyticsRoutesChart'); if(!host) return;
+  const order=['distance','balanced','risk']; const rows=order.map(k=>currentMission?.[k]).filter(Boolean);
+  if(!rows.length){host.innerHTML='<div class="chartEmpty">Calcula la misión para comparar estrategias.</div>';return;}
+  const label=m=>m.mode==='distance'?ui('MÁS DIRECTA','MOST DIRECT'):m.mode==='risk'?ui('MENOR EXPOSICIÓN','LOWER EXPOSURE'):ui('EQUILIBRADA','BALANCED');
+  const cell=(m,text)=>`<div class="value ${m.mode===selected?.mode?'selected':''}">${text}</div>`;
+  const metrics=[
+    [ui('Distancia','Distance'),m=>Number.isFinite(m.metrics?.distanceKm)?`${m.metrics.distanceKm.toFixed(2)} km`:'—'],
+    [ui('Duración','Duration'),m=>formatHours(m.duration)],
+    [ui('Ciencia','Science'),m=>`${Math.round(m.scienceValueTotal||0)} pts`],
+    [ui('Pendiente máx.','Max slope'),m=>Number.isFinite(m.metrics?.maxSlopeDeg)?`${m.metrics.maxSlopeDeg.toFixed(1)}°`:'—'],
+    [ui('Transitabilidad','Traversability'),m=>Number.isFinite(m.metrics?.avgTransitability)?`${Math.round(m.metrics.avgTransitability)}/100`:'—'],
+    [ui('Confianza','Confidence'),m=>Number.isFinite(m.metrics?.avgConfidence)?`${Math.round(m.metrics.avgConfidence)}%`:'—'],
+    [ui('Dificultad','Difficulty'),m=>Number.isFinite(m.score)?`${m.score}/100`:'—']
+  ];
+  host.innerHTML=`<div class="v35RouteCompare"><div class="head">${ui('MÉTRICA','METRIC')}</div>${rows.map(m=>`<div class="head ${m.mode===selected?.mode?'selected':''}">${label(m)}</div>`).join('')}${metrics.map(([name,fn])=>`<div class="metric">${name}</div>${rows.map(m=>cell(m,fn(m))).join('')}`).join('')}</div>`;
+}
+function renderAnalyticsHealth(mission){
+  const host=$('analyticsHealthChart'); if(!host) return;
+  if(!mission){host.innerHTML='<div class="chartEmpty">Sin datos.</div>';return;}
+  const available=mission.availableHours ?? availableMissionHours(mission.params||normalizeParams()), margin=available-Number(mission.duration||0);
+  const vals=[
+    [ui('Cobertura científica','Science coverage'),clamp(Number(mission.scienceEfficiency)||0,0,100)],
+    [ui('Transitabilidad media','Average traversability'),clamp(Number(mission.metrics?.avgTransitability)||0,0,100)],
+    [ui('Confianza cartográfica','Cartographic confidence'),clamp(Number(mission.metrics?.avgConfidence)||0,0,100)],
+    [ui('Terreno / dificultad','Terrain / difficulty'),clamp(100-(Number(mission.score)||0),0,100)],
+    [ui('Reserva de retorno','Return reserve'),margin<=0?0:clamp(margin/Math.max(.001,available)*100,0,100)],
+    [ui('Cobertura de terreno','Terrain coverage'),clamp(100-(Number(mission.metrics?.uncertainDistanceKm)||0)/Math.max(.001,Number(mission.metrics?.distanceKm)||1)*100,0,100)]
+  ];
+  host.innerHTML=`<div class="v35Health">${vals.map(([name,v])=>`<div class="v35HealthItem"><span>${name}</span><div class="v35HealthTrack"><div class="v35HealthFill" style="width:${v.toFixed(1)}%"></div></div><b>${Math.round(v)}</b></div>`).join('')}</div>`;
+}
+function renderMissionAnalytics(mission){
+  if($('analyticsRouteName')) $('analyticsRouteName').textContent=mission?($('routeName')?.textContent||ui('RUTA ACTIVA','ACTIVE ROUTE')):ui('SIN MISIÓN','NO MISSION');
+  if($('analyticsGeneratedAt')) $('analyticsGeneratedAt').textContent=mission&&lastCalculatedAt?lastCalculatedAt.toLocaleString(uiLang()==='en'?'en-US':'es-NI',{dateStyle:'short',timeStyle:'short'}):ui('CALCULA UNA RUTA','CALCULATE A ROUTE');
+  renderAnalyticsProfile(mission); renderAnalyticsDistributions(mission); renderAnalyticsEva(mission); renderAnalyticsScience(mission); renderAnalyticsRoutes(mission); renderAnalyticsHealth(mission);
+}
+
 function renderMissionTimeline(mission){
   const host=$('missionTimeline'); if(!host) return;
   const seq=mission?.includedPoints||mission?.sequence||missionPoints;
@@ -951,6 +1080,7 @@ function renderMission(mission){
   updateScienceSummary(mission);
   renderMissionTimeline(mission);
   renderTerrainProfile(mission);
+  renderMissionAnalytics(mission);
   updateMissionHud(mission);
   updateHeaderStatus();
   $('recalculate').disabled=false; $('saveMission').disabled=false;
@@ -1015,7 +1145,7 @@ function resetMetrics(){
   if($('lastCalculated'))$('lastCalculated').textContent=ui('Último cálculo: —','Last calculation: —');
   if($('recalculate'))$('recalculate').disabled=true;
   if($('saveMission'))$('saveMission').disabled=true;
-  renderTerrainProfile(null); renderMissionTimeline(null); updateMissionHud(null); updateHeaderStatus();
+  renderTerrainProfile(null); renderMissionAnalytics(null); renderMissionTimeline(null); updateMissionHud(null); updateHeaderStatus();
 }
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}
 function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2;$('recalculate').disabled=b||!currentMission;$('saveMission').disabled=b||!currentMission;if(msg)$('statusText').textContent=msg;else $('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}
@@ -1126,7 +1256,7 @@ async function exportMissionPdf(mode){
     },
     software:{
       name:'JEZERO',
-      version:'V34',
+      version:'V35',
       interfaceTheme:themeInfo().label,
       themeKey:themeInfo().key,
       reportLanguage:uiLang()
@@ -1404,6 +1534,15 @@ $('useSelectedLanding')?.addEventListener('click',()=>{
   if(!id){showToast(ui('Selecciona primero un sitio de aterrizaje.','Select a landing site first.'));return;}
   const f=landingLayer.getSource().getFeatures().find(x=>x.get('refId')===id); if(f) setBaseFromLanding(f);
 });
+const hudPrefKey='jezero-hud-v35';
+const hudEl=$('missionHud'),hudToggle=$('missionHudToggle');
+if(hudEl&&hudToggle){
+  const pref=localStorage.getItem(hudPrefKey); if(pref==='expanded'){hudEl.classList.remove('is-compact');hudToggle.setAttribute('aria-expanded','true');hudToggle.textContent='⌃';}
+  hudToggle.addEventListener('click',()=>{const compact=hudEl.classList.toggle('is-compact');hudToggle.setAttribute('aria-expanded',String(!compact));hudToggle.textContent=compact?'⌄':'⌃';localStorage.setItem(hudPrefKey,compact?'compact':'expanded');});
+}
+window.addEventListener('jezero:themechange',()=>renderMissionAnalytics(selectedMission()));
+window.addEventListener('jezero:languagechange',()=>renderMissionAnalytics(selectedMission()));
+
 $('planMode').onclick=newMission;
 $('calculate').onclick=()=>calculateMission();
 $('clearRoute').onclick=clearMission;

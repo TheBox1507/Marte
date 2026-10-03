@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
   <link rel="shortcut icon" href="assets/favicon.ico?v=8">
-  <link rel="stylesheet" href="style.css?v=34">
-  <script src="modules/theme.js?v=34"></script>
+  <link rel="stylesheet" href="style.css?v=35">
+  <script src="modules/theme.js?v=35"></script>
 </head>
 <body data-module="planner">
 <header class="topbar">
@@ -209,7 +209,7 @@
     <div class="modulePanel" data-module-panel="analysis">
       <section>
         <div class="sectionTitle">RESULTADOS DE MISIÓN</div>
-        <div class="moduleIntro"><b>Ruta, ciencia y terreno en una sola lectura</b><p>Revisa el recorrido seleccionado y genera un documento completo con perfil topográfico y análisis por tramos.</p></div>
+        <div class="moduleIntro"><b>Ruta, ciencia y terreno en una sola lectura</b><p>Abre el centro de análisis para revisar terreno, ciencia, EVA, estrategias y generar el informe técnico completo.</p></div>
       </section>
       <section class="analysisGrid resultsGrid">
         <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
@@ -346,12 +346,44 @@
         </div>
       </div>
     </div>
-    <div class="missionHud" id="missionHud">
+    <div class="missionHud is-compact" id="missionHud">
+      <button class="missionHudToggle" id="missionHudToggle" type="button" aria-label="Expandir o contraer estado de misión" aria-expanded="false">⌄</button>
       <div class="missionHudCell"><span>PLAN</span><b id="hudPlan">SIN RUTA</b></div>
       <div class="missionHudCell"><span>SCIENCE RETURN</span><b id="hudScience">—</b></div>
       <div class="missionHudCell"><span>TRANSITABILIDAD</span><b id="hudTransit">—</b></div>
       <div class="missionHudCell return"><span>RETURN RESERVE</span><b id="hudReturn">—</b></div>
     </div>
+
+    <section class="analyticsWorkspace" id="analyticsWorkspace" aria-label="Centro de análisis de la misión">
+      <header class="analyticsHeader">
+        <div><span>JEZERO / MISSION ANALYTICS</span><h2>ANÁLISIS INTEGRAL DE MISIÓN</h2><p>Terreno, ciencia, EVA y comparación de estrategias en una sola superficie de análisis.</p></div>
+        <div class="analyticsHeaderMeta"><b id="analyticsRouteName">SIN MISIÓN</b><span id="analyticsGeneratedAt">CALCULA UNA RUTA</span></div>
+      </header>
+      <div class="analyticsScroll">
+        <article class="analyticsCard analyticsCardWide">
+          <div class="analyticsCardHead"><div><span>01 / CORREDOR</span><h3>PERFIL MULTICAPA DE LA RUTA</h3></div><small id="analyticsProfileHint">Elevación · pendiente · transitabilidad · confianza</small></div>
+          <div class="analyticsChart analyticsProfileChart" id="analyticsProfileChart"><div class="chartEmpty">Calcula una misión para generar el perfil multicapa.</div></div>
+          <div class="analyticsTooltip" id="analyticsProfileTooltip" hidden></div>
+        </article>
+        <div class="analyticsGrid2">
+          <article class="analyticsCard"><div class="analyticsCardHead"><div><span>02 / TERRENO</span><h3>DISTRIBUCIÓN DE PENDIENTES</h3></div></div><div class="analyticsChart" id="analyticsSlopeChart"><div class="chartEmpty">Sin datos.</div></div></article>
+          <article class="analyticsCard"><div class="analyticsCardHead"><div><span>03 / MOVILIDAD</span><h3>TRANSITABILIDAD DEL RECORRIDO</h3></div></div><div class="analyticsChart" id="analyticsTransitChart"><div class="chartEmpty">Sin datos.</div></div></article>
+        </div>
+        <div class="analyticsGrid2">
+          <article class="analyticsCard"><div class="analyticsCardHead"><div><span>04 / EVA</span><h3>PRESUPUESTO DE TIEMPO</h3></div></div><div class="analyticsChart" id="analyticsEvaChart"><div class="chartEmpty">Sin datos.</div></div></article>
+          <article class="analyticsCard"><div class="analyticsCardHead"><div><span>05 / SCIENCE RETURN</span><h3>CIENCIA ACUMULADA</h3></div></div><div class="analyticsChart" id="analyticsScienceChart"><div class="chartEmpty">Sin datos.</div></div></article>
+        </div>
+        <article class="analyticsCard analyticsCardWide">
+          <div class="analyticsCardHead"><div><span>06 / ESTRATEGIAS</span><h3>COMPARACIÓN DE RUTAS</h3></div><small>Directa · equilibrada · menor exposición</small></div>
+          <div class="analyticsChart" id="analyticsRoutesChart"><div class="chartEmpty">Calcula la misión para comparar estrategias.</div></div>
+        </article>
+        <article class="analyticsCard analyticsCardWide">
+          <div class="analyticsCardHead"><div><span>07 / MISSION HEALTH</span><h3>ESTADO GLOBAL DEL PLAN</h3></div><small>Indicadores derivados únicamente de datos calculados</small></div>
+          <div class="analyticsChart" id="analyticsHealthChart"><div class="chartEmpty">Sin datos.</div></div>
+        </article>
+      </div>
+    </section>
+
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
     <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
@@ -456,7 +488,7 @@
     <!-- Results details -->
     <div class="modulePanel" data-module-panel="analysis">
       <section class="card"><div class="sectionTitle">RESULTADO DE LA RUTA</div><div class="metricGrid"><div><small>RIESGO / DIFICULTAD</small><strong data-mirror="riskNumber">—</strong></div><div><small>PENDIENTE MEDIA</small><strong data-mirror="avgSlope">—</strong></div><div><small>TRANSITABILIDAD</small><strong data-mirror="avgTransitability">—</strong></div><div><small>CONFIANZA</small><strong data-mirror="avgConfidence">—</strong></div><div><small>VALOR CIENTÍFICO</small><strong data-mirror="scienceValueTotal">—</strong></div><div><small>MARGEN</small><strong data-mirror="missionMargin">—</strong></div></div></section>
-      <section class="card"><div class="sectionTitle">DOCUMENTO DE MISIÓN</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF incluye identificación, ciencia, estrategias, perfil de elevación, métricas del terreno, sector más exigente, análisis tramo por tramo, nodos de ruta, fuentes y limitaciones.</p></section>
+      <section class="card"><div class="sectionTitle">DOCUMENTO DE MISIÓN</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF V35 conserva toda la información calculada: identificación, objetivos, estrategias, perfiles, distribuciones, EVA, Science Return, Mission Health, terreno por tramo, nodos, fuentes, parámetros y limitaciones.</p></section>
     </div>
 
     <!-- Settings details -->
@@ -472,8 +504,8 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="modules/i18n.js?v=34"></script>
-<script src="script.js?v=34"></script>
-<script src="modules/module-shell.js?v=34"></script>
+<script src="modules/i18n.js?v=35"></script>
+<script src="script.js?v=35"></script>
+<script src="modules/module-shell.js?v=35"></script>
 </body>
 </html>

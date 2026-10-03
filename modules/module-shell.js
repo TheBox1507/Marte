@@ -1,5 +1,5 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v34';
+  const MODULE_KEY = 'jezero-active-module-v35';
   const labels = {
     explorer: 'MAPA',
     planner: 'MISIÓN',
@@ -80,7 +80,7 @@
       return;
     }
 
-    // V34: los botones inferiores son también interruptores de sus opciones.
+    // V35: los botones inferiores son también interruptores de sus opciones.
     // Primera pulsación: activa el módulo y abre ambos paneles.
     // Segunda pulsación sobre el mismo módulo: cierra ambos paneles.
     // Una pulsación posterior vuelve a abrirlos sin perder el módulo activo.
@@ -131,7 +131,7 @@
   }
 
   setupMirrors();
-  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v33') || localStorage.getItem('jezero-active-module-v32') || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v34') || localStorage.getItem('jezero-active-module-v33') || localStorage.getItem('jezero-active-module-v32') || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
   const migrated = initialRaw === 'reports' ? 'analysis' : initialRaw === 'terrain' ? 'explorer' : initialRaw === 'control' ? 'eva' : initialRaw;
   const initial = migrated;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});
