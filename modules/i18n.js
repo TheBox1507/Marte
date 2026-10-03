@@ -1,10 +1,24 @@
 (() => {
-  const KEY = 'jezero-language-v34';
+  const KEY = 'jezero-language-v36';
   const LEGACY_KEY = 'jezero-language-v31';
   const VALID = new Set(['es','en']);
 
   const ES_EN = {
     'EVA MISSION SYSTEM':'EVA MISSION SYSTEM',
+    'TERRAIN · ROUTING · NAVIGATION':'TERRAIN · ROUTING · NAVIGATION',
+    'Define la base, agrega puntos de misión y deja que JEZERO optimice automáticamente el orden de visita sobre el terreno marciano.':'Define the base, add mission points, and let JEZERO automatically optimize the visit order across Martian terrain.',
+    'PUNTOS DE MISIÓN':'MISSION POINTS','ORDEN AUTOMÁTICO':'AUTOMATIC ORDER','La numeración final se asigna después de calcular la ruta óptima; el orden en que agregas los puntos no obliga al recorrido.':'Final numbering is assigned after calculating the optimized route; the order in which you add points does not constrain the traverse.',
+    'Optimizar automáticamente el orden de visita':'Automatically optimize visit order','Punto de misión':'Mission point','Tiempo de parada (min)':'Stop time (min)','PARADA':'STOP','ORDEN CALCULADO':'CALCULATED ORDER','PENDIENTE DE CÁLCULO':'PENDING CALCULATION','ORDEN MANUAL':'MANUAL ORDER','INICIO':'START',
+    'Ruta, terreno y desempeño EVA en una sola lectura':'Route, terrain, and EVA performance in one view','Abre el centro de análisis para revisar terreno, movilidad, retorno, estrategias y generar el informe técnico completo.':'Open the analysis center to review terrain, mobility, return margin, strategies, and generate the complete technical report.',
+    'ANÁLISIS INTERACTIVO DE MISIÓN':'INTERACTIVE MISSION ANALYSIS','Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.':'All charts are concentrated here and synchronized with the route: terrain, mobility, return margin, and strategy comparison.',
+    'ESTRATEGIA':'STRATEGY','× LIMPIAR SELECCIÓN':'× CLEAR SELECTION','Mueve el cursor sobre un gráfico para inspeccionar la ruta.':'Move the cursor over a chart to inspect the route.',
+    'PERFIL MULTICAPA DE LA RUTA':'MULTI-LAYER ROUTE PROFILE','Elevación · pendiente · rugosidad · transitabilidad · confianza':'Elevation · slope · roughness · traversability · confidence',
+    'DISTRIBUCIÓN DE PENDIENTES':'SLOPE DISTRIBUTION','TRANSITABILIDAD':'TRAVERSABILITY','RUGOSIDAD':'ROUGHNESS','CONFIANZA CARTOGRÁFICA':'CARTOGRAPHIC CONFIDENCE',
+    'PRESUPUESTO DE TIEMPO':'TIME BUDGET','Tránsito · paradas · reserva / exceso':'Travel · stops · reserve / overrun','RESERVA DE RETORNO':'RETURN RESERVE','Margen estimado conforme avanza la ruta':'Estimated margin along the route',
+    'ASCENSO Y DESCENSO ACUMULADO':'CUMULATIVE ASCENT AND DESCENT','Metros acumulados por distancia':'Accumulated meters by distance','DIFICULTAD DEL TERRENO':'TERRAIN DIFFICULTY','Índice derivado de pendiente, movilidad y confianza':'Index derived from slope, mobility, and confidence',
+    'COMPARACIÓN INTERACTIVA DE RUTAS':'INTERACTIVE ROUTE COMPARISON','Haz clic en una estrategia para convertirla en la ruta activa':'Click a strategy to make it the active route','ESTADO GLOBAL DEL PLAN':'GLOBAL PLAN STATUS','Solo métricas calculadas':'Calculated metrics only',
+    'MAPA ANALÍTICO':'ANALYTICAL MAP','UBICACIÓN DEL TRAMO':'SEGMENT LOCATION','El punto seleccionado se sincroniza con los gráficos':'The selected point is synchronized with the charts','TABLA TÉCNICA INTERACTIVA':'INTERACTIVE TECHNICAL TABLE','Selecciona un tramo para resaltarlo en el mapa':'Select a leg to highlight it on the map',
+    'DISTANCIA':'DISTANCE','PEND. MÁX.':'MAX SLOPE','RUGOSIDAD':'ROUGHNESS','PUNTOS':'POINTS','TIEMPO EN PUNTOS':'TIME AT POINTS',
     'SCIENCE · TERRAIN · NAVIGATION':'SCIENCE · TERRAIN · NAVIGATION',
     'MISIÓN':'MISSION','MAPA':'MAP','CONFIG.':'SETTINGS',
     'MAPA Y CAPAS':'MAP & LAYERS','Cartografía científica · NASA / USGS':'Scientific cartography · NASA / USGS',
@@ -27,7 +41,7 @@
     'Revisa el recorrido seleccionado y genera un documento completo con perfil topográfico y análisis por tramos.':'Review the selected traverse and generate a complete document with terrain profile and leg-by-leg analysis.',
     'PERFIL DEL TERRENO':'TERRAIN PROFILE','Calcula una misión para generar el perfil.':'Calculate a mission to generate the profile.',
     'Guardar misión y generar PDF completo':'Save mission and generate complete PDF',
-    'PLAN':'PLAN','SCIENCE RETURN':'SCIENCE RETURN','RETURN RESERVE':'RETURN RESERVE','RUTA ACTIVA':'ACTIVE ROUTE','SIN RUTA':'NO ROUTE',
+    'PLAN':'PLAN','RETURN RESERVE':'RETURN RESERVE','RUTA ACTIVA':'ACTIVE ROUTE','SIN RUTA':'NO ROUTE',
     'Corredor EVA':'EVA corridor','Zona visual de navegación':'Visual navigation zone',
     'TERRENO / CORREDOR EVA':'TERRAIN / EVA CORRIDOR','PEND. MEDIA':'AVG. SLOPE','TRANSIT. MEDIA':'AVG. TRAVERSABILITY','TRANSIT. MÍN.':'MIN. TRAVERSABILITY','CONF. MÍN.':'MIN. CONFIDENCE',
     'PENDIENTE MÁX.':'MAX. SLOPE','DESNIVEL':'ELEVATION CHANGE','RETORNO':'RETURN',
@@ -46,7 +60,7 @@
     'Construye la travesía':'Build the traverse','Define la base, agrega objetivos y calcula tres estrategias de recorrido sobre el terreno marciano.':'Define the base, add targets and calculate three traverse strategies across Martian terrain.',
     'Nueva misión / agregar puntos':'New mission / add points','AÑADIR POR COORDENADAS':'ADD BY COORDINATES','Nuevo punto de misión':'New mission point','MARTE':'MARS',
     'Introduce latitud y longitud en grados decimales. También puedes tocar directamente el mapa.':'Enter latitude and longitude in decimal degrees. You can also click directly on the map.',
-    'Latitud':'Latitude','Longitud':'Longitude','Nombre del punto':'Point name','Tipo':'Type','Objetivo':'Target','Base':'Base','Visita':'Visit','Obligatorio':'Required','Opcional':'Optional','Tiempo en el objetivo (min)':'Time at target (min)','Valor científico (0-100)':'Science value (0-100)','Agregar punto':'Add point',
+    'Latitud':'Latitude','Longitud':'Longitude','Nombre del punto':'Point name','Tipo':'Type','Punto':'Point','Base':'Base','Tiempo de parada (min)':'Stop time (min)','Agregar punto':'Add point',
     'Fijar base en el primer punto':'Set first point as base','Calcular misión':'Calculate mission','Limpiar misión':'Clear mission','PUNTOS PLANIFICADOS':'PLANNED POINTS','SECUENCIA DE VISITA':'VISIT SEQUENCE','Regresar a la base al finalizar':'Return to base at the end',
     'ESTRATEGIA DE RUTA':'ROUTE STRATEGY','Equilibrada':'Balanced','Distancia + terreno':'Distance + terrain','Menor exposición':'Lower exposure','Penaliza pendientes':'Penalizes slopes','Más directa':'Most direct','Minimiza distancia':'Minimizes distance',
     'Diseño científico de la travesía':'Scientific traverse design','Edita cada objetivo desde aquí. El valor científico, el tiempo de trabajo y si es obligatorio u opcional participan directamente en el cálculo de la misión.':'Edit each target here. Science value, work time and required/optional status directly affect mission calculation.',
@@ -62,7 +76,7 @@
     'NASA Clásico':'NASA Classic','Azul NASA, rojo de misión y blanco técnico.':'NASA blue, mission red and technical white.',
     'Artemis Lunar':'Artemis Lunar','Grafito, plata lunar y azul frío de navegación.':'Graphite, lunar silver and cold navigation blue.',
     'Espacio Profundo':'Deep Space','Índigo, violeta y cian para una consola futurista.':'Indigo, violet and cyan for a futuristic console.',
-    'Ciencia Marciana':'Mars Science','Rojo mineral, cobre y azul de instrumentación.':'Mineral red, copper and instrumentation blue.',
+    'Marte Mineral':'Mars Mineral','Rojo mineral, cobre y azul de instrumentación.':'Mineral red, copper and instrumentation blue.',
     'Aurora Teal':'Aurora Teal','Verde azulado, menta y azul eléctrico científico.':'Teal, mint and scientific electric blue.',
     'EVA Alto Contraste':'EVA High Contrast','Negro, blanco y amarillo para máxima lectura operacional.':'Black, white and yellow for maximum operational readability.',
     'IDENTIFICACIÓN DE LA MISIÓN':'MISSION IDENTIFICATION','Nombre de misión':'Mission name','Código / ID':'Code / ID','Tripulación':'Crew','Notas del plan':'Plan notes','PARÁMETROS PREDETERMINADOS':'DEFAULT PARAMETERS','Toma los valores actuales del Planificador: velocidad, duración EVA, margen de retorno y límites de navegación.':'Uses the current Planner values: speed, EVA duration, return margin and navigation limits.','Guardar parámetros actuales como predeterminados':'Save current parameters as defaults','Aplicar parámetros predeterminados':'Apply default parameters','Usando valores de fábrica hasta que guardes un perfil.':'Using factory values until you save a profile.','DATOS LOCALES':'LOCAL DATA','Exportar misión a JSON':'Export mission to JSON','Importar misión desde JSON':'Import mission from JSON','Borrar historial local':'Clear local history',
@@ -83,8 +97,8 @@
   let mutating = false;
 
   const moduleLabels = {
-    es:{explorer:'MAPA',planner:'MISIÓN',science:'CIENCIA',eva:'EVA',analysis:'RESULTADOS',settings:'CONFIGURACIÓN'},
-    en:{explorer:'MAP',planner:'MISSION',science:'SCIENCE',eva:'EVA',analysis:'RESULTS',settings:'SETTINGS'}
+    es:{explorer:'MAPA',planner:'MISIÓN',eva:'EVA',analysis:'RESULTADOS',settings:'CONFIGURACIÓN'},
+    en:{explorer:'MAP',planner:'MISSION',eva:'EVA',analysis:'RESULTS',settings:'SETTINGS'}
   };
 
   function translatePattern(text, lang=current){
