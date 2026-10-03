@@ -78,6 +78,45 @@ function pointStatus(pt){
 }
 function safeNumber(v,digits=2){ return finite(v)?Number(v).toFixed(digits):'--'; }
 
+function marsDistanceKm(a,b){
+  if(!a||!b||!finite(a.lat)||!finite(a.lon)||!finite(b.lat)||!finite(b.lon)) return 0;
+  const rad=Math.PI/180, R=3389.5;
+  const p1=Number(a.lat)*rad,p2=Number(b.lat)*rad;
+  let dlon=(Number(b.lon)-Number(a.lon))*rad;
+  dlon=((dlon+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  const dlat=p2-p1;
+  const h=Math.sin(dlat/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dlon/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function terrainProfileFromLegs(legs=[]){
+  const pts=[]; let km=0,prev=null;
+  for(const leg of legs){
+    for(let i=0;i<(leg.path||[]).length;i++){
+      if(pts.length && i===0) continue;
+      const node=leg.path[i];
+      if(prev) km+=marsDistanceKm(prev,node);
+      if(finite(node?.elevationM)) pts.push({km,elevationM:Number(node.elevationM)});
+      prev=node;
+    }
+  }
+  return pts;
+}
+function terrainSummary(selected){
+  const profile=terrainProfileFromLegs(selected?.legs||[]);
+  const elevations=profile.map(x=>x.elevationM).filter(Number.isFinite);
+  const hardest=(selected?.legs||[]).map((leg,i)=>({leg,i,score:riskScoreForLeg(leg.metrics||{})}))
+    .sort((a,b)=>(b.score??-1)-(a.score??-1))[0] || null;
+  return {
+    profile,
+    startElevationM:elevations.length?elevations[0]:null,
+    endElevationM:elevations.length?elevations[elevations.length-1]:null,
+    minElevationM:elevations.length?Math.min(...elevations):null,
+    maxElevationM:elevations.length?Math.max(...elevations):null,
+    reliefM:elevations.length?Math.max(...elevations)-Math.min(...elevations):null,
+    hardest
+  };
+}
+
 const PDF_THEME_HEX={
   'nasa-classic':{body:'#0A1729',heading:'#0B3D91',accent:'#1769D2',title:'#FC3D21',muted:'#4D6B8A',light:'#E8F2FA',bar:'#071321'},
   'artemis-lunar':{body:'#151B22',heading:'#263B52',accent:'#5EA6FF',title:'#788B9E',muted:'#607080',light:'#EEF2F6',bar:'#0C1015'},
@@ -94,19 +133,20 @@ function hexRgbPdf(hex){
 }
 
 const PDF_EN_REPLACEMENTS = [
-  ['Informe completo de planificación de travesía científica EVA en Marte - motor multicriterio V31','Complete Mars EVA scientific traverse planning report - multicriteria engine V31'],
+  ['Informe completo de planificación de travesía científica EVA en Marte - motor multicriterio V32','Complete Mars EVA scientific traverse planning report - multicriteria engine V32'],
   ['IDENTIFICACIÓN Y RESUMEN DE LA MISIÓN','MISSION IDENTIFICATION AND SUMMARY'],
   ['PARÁMETROS OPERACIONALES','OPERATIONAL PARAMETERS'],['TODOS LOS PUNTOS PLANIFICADOS','ALL PLANNED POINTS'],['SECUENCIA SELECCIONADA','SELECTED SEQUENCE'],['MÉTRICAS COMPLETAS DE LA RUTA SELECCIONADA','COMPLETE SELECTED ROUTE METRICS'],['LÍNEA BASE DE OBJETIVOS OBLIGATORIOS','REQUIRED-TARGET BASELINE'],['COMPARACIÓN DE LAS TRES ESTRATEGIAS','THREE-STRATEGY COMPARISON'],['DETALLE DE TRAMOS DE LA ESTRATEGIA SELECCIONADA','SELECTED-STRATEGY LEG DETAILS'],['OBJETIVOS OPCIONALES OMITIDOS','OMITTED OPTIONAL TARGETS'],['DATOS DE FUENTE Y CONFIGURACIÓN TÉCNICA','DATA SOURCES AND TECHNICAL CONFIGURATION'],['LIMITACIONES Y SEGURIDAD','LIMITATIONS AND SAFETY'],['APÉNDICE TÉCNICO - NODOS DE TODAS LAS RUTAS CALCULADAS','TECHNICAL APPENDIX - NODES FROM ALL CALCULATED ROUTES'],
   ['Identificador del informe','Report identifier'],['Generado','Generated'],['Versión del sistema','System version'],['Tema de interfaz','Interface theme'],['Idioma','Language'],['Nombre','Name'],['Código / ID','Code / ID'],['Tripulación','Crew'],['Notas del plan','Plan notes'],['Estrategia seleccionada','Selected strategy'],['Estado operacional del cálculo','Calculation operational status'],['Regreso a la base al finalizar','Return to base at end'],['Puntos planificados','Planned points'],['Obligatorios/base','Required/base'],['Opcionales','Optional'],['Puntos incluidos en la estrategia seleccionada','Points included in selected strategy'],['Objetivos opcionales omitidos','Omitted optional targets'],['Base de misión','Mission base'],['Último cálculo de la misión','Last mission calculation'],
-  ['Velocidad nominal configurada','Configured nominal speed'],['Tiempo máximo EVA configurado','Configured maximum EVA time'],['Margen reservado para retorno','Reserved return margin'],['Pendiente máxima permitida (límite duro)','Maximum allowed slope (hard limit)'],['Transitabilidad mínima permitida (límite duro)','Minimum allowed traversability (hard limit)'],['Confianza cartográfica mínima permitida (límite duro)','Minimum cartographic confidence (hard limit)'],['Tiempo disponible para la misión después de la reserva','Mission time available after reserve'],['Tiempo mínimo de EVA necesario para conservar el margen configurado','Minimum EVA time needed to preserve configured margin'],['Tiempo total programado en objetivos','Total scheduled target time'],['Tiempo estimado de desplazamiento','Estimated travel time'],['Duración total estimada','Total estimated duration'],['Margen operacional restante','Remaining operational margin'],['Oxígeno, batería y control térmico: NO MODELADOS EN V31. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.','Oxygen, battery and thermal control: NOT MODELED IN V31. JEZERO does not invent resource estimates that are not yet part of the engine.'],
+  ['Velocidad nominal configurada','Configured nominal speed'],['Tiempo máximo EVA configurado','Configured maximum EVA time'],['Margen reservado para retorno','Reserved return margin'],['Pendiente máxima permitida (límite duro)','Maximum allowed slope (hard limit)'],['Transitabilidad mínima permitida (límite duro)','Minimum allowed traversability (hard limit)'],['Confianza cartográfica mínima permitida (límite duro)','Minimum cartographic confidence (hard limit)'],['Tiempo disponible para la misión después de la reserva','Mission time available after reserve'],['Tiempo mínimo de EVA necesario para conservar el margen configurado','Minimum EVA time needed to preserve configured margin'],['Tiempo total programado en objetivos','Total scheduled target time'],['Tiempo estimado de desplazamiento','Estimated travel time'],['Duración total estimada','Total estimated duration'],['Margen operacional restante','Remaining operational margin'],['Oxígeno, batería y control térmico: NO MODELADOS EN V32. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.','Oxygen, battery and thermal control: NOT MODELED IN V32. JEZERO does not invent resource estimates that are not yet part of the engine.'],
   ['Nombre','Name'],['Tipo','Type'],['Latitud','Latitude'],['Longitud','Longitude'],['Ciencia','Science'],['Parada','Stop'],['Requerido','Required'],['Categoría científica','Science category'],['Elevación del punto','Point elevation'],['no almacenada en el punto maestro','not stored in master point'],['Nota científica','Science note'],
   ['Estrategia','Strategy'],['Descripción','Description'],['Distancia total','Total distance'],['Duración estimada','Estimated duration'],['Dificultad multicriterio experimental','Experimental multicriteria difficulty'],['Pendiente máxima','Maximum slope'],['Pendiente media absoluta','Average absolute slope'],['Pendiente máxima de subida','Maximum uphill slope'],['pendiente máxima de bajada','maximum downhill slope'],['Transitabilidad media','Average traversability'],['mínima','minimum'],['Confianza cartográfica media','Average cartographic confidence'],['Rugosidad angular media estimada','Estimated average angular roughness'],['distancia con confianza <50%','distance with confidence <50%'],['distancia difícil','difficult distance'],['Valor científico incluido','Included science value'],['puntos de','points out of'],['potenciales','potential'],['cobertura científica','science coverage'],['Ascenso acumulado','Total ascent'],['Descenso acumulado','Total descent'],['Variación altimétrica acumulada','Total elevation variation'],['Segmentos evaluados','Evaluated segments'],['Tramos de misión','Mission legs'],['Tiempo disponible','Available time'],['Excede límite','Exceeds limit'],
   ['Duración si se visitan únicamente base/objetivos obligatorios','Duration if only base/required targets are visited'],['Tiempo programado en objetivos obligatorios','Scheduled time at required targets'],['Dificultad multicriterio','Multicriteria difficulty'],['valor científico obligatorio','required science value'],['Distancia','Distance'],['Pendiente media','Average slope'],['Secuencia','Sequence'],['No se recibió una línea base independiente para objetivos obligatorios.','No independent required-target baseline was received.'],
   ['Mín. EVA','Min. EVA'],['Dificultad','Difficulty'],['Estado','Status'],['FUERA','OUT'],['Descripción','Description'],['subida máx.','max uphill'],['bajada máx.','max downhill'],['transitabilidad','traversability'],['confianza','confidence'],['Ascenso','Ascent'],['descenso','descent'],['segmentos','segments'],['ciencia','science'],['Opcionales omitidos','Omitted optional targets'],['ninguno','none'],
   ['Tramo','Leg'],['Salida','Start'],['Llegada','Arrival'],['Origen','Origin'],['Destino','Destination'],['Duración','Duration'],['media','average'],['Transitabilidad media/mínima','Average/minimum traversability'],['confianza media/mínima','average/minimum confidence'],['separación de malla','grid spacing'],['Variación altimétrica','Elevation variation'],['Parada programada al llegar','Scheduled stop on arrival'],['Nodos almacenados de la trayectoria','Stored path nodes'],['No existen tramos calculados en la estrategia seleccionada.','No calculated legs exist for the selected strategy.'],
-  ['No se omitieron objetivos opcionales en la estrategia seleccionada.','No optional targets were omitted in the selected strategy.'],['Modelo de elevación','Elevation model'],['Cartografía / procedencia','Cartography / provenance'],['Mapa/base visual','Map / visual basemap'],['Radio marciano usado para distancias','Martian radius used for distances'],['Motor: A* sobre corredor de búsqueda 2D adaptado al tramo. Estrategias: más directa, equilibrada y menor exposición.','Engine: A* over a 2D search corridor adapted to each leg. Strategies: most direct, balanced and lower exposure.'],['Modelo de duración: velocidad nominal ajustada por pendiente media más tiempos de permanencia en objetivos.','Duration model: nominal speed adjusted by average slope plus target dwell times.'],['Motor V31: A* multicriterio con pendiente direccional, transitabilidad, rugosidad local, incertidumbre/confianza cartográfica y límites duros configurables.','V31 engine: multicriteria A* with directional slope, traversability, local roughness, uncertainty/cartographic confidence and configurable hard limits.'],['Selección científica: los objetivos opcionales se priorizan por valor científico frente al costo incremental de distancia, tiempo, dificultad y confianza de la ruta.','Science selection: optional targets are prioritized by science value versus incremental distance, time, difficulty and route-confidence cost.'],['Modelo de dificultad: combina pendiente, transitabilidad mínima, confianza cartográfica y rugosidad angular. Los límites duros excluyen segmentos del grafo; no son simples penalizaciones.','Difficulty model: combines slope, minimum traversability, cartographic confidence and angular roughness. Hard limits exclude graph segments; they are not simple penalties.'],
-  ['JEZERO V31 es una herramienta de planificación y simulación. Sus índices de transitabilidad, confianza y dificultad NO constituyen una certificación de seguridad para una EVA tripulada.','JEZERO V31 is a planning and simulation tool. Its traversability, confidence and difficulty indices DO NOT constitute a safety certification for crewed EVA.'],['La resolución y calidad de la ruta dependen de los datos de elevación disponibles. MDEM200M es apropiado para planificación regional, no para detectar obstáculos de escala humana como rocas pequeñas, zanjas o bordes locales.','Route resolution and quality depend on available elevation data. MDEM200M is appropriate for regional planning, not for detecting human-scale obstacles such as small rocks, trenches or local edges.'],['El motor V31 bloquea elevación desconocida y puede bloquear baja confianza según el umbral configurado. Aun así, la confianza calculada es una estimación de calidad del muestreo, no una validación de obstáculos a escala humana.','The V31 engine blocks unknown elevation and can block low confidence according to the configured threshold. Calculated confidence remains a sampling-quality estimate, not human-scale obstacle validation.'],['Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V31.','Oxygen, battery, communications, temperature, radiation, real-time localization and metabolic effort are not yet part of the V31 operational calculation.'],
+  ['No se omitieron objetivos opcionales en la estrategia seleccionada.','No optional targets were omitted in the selected strategy.'],['Modelo de elevación','Elevation model'],['Cartografía / procedencia','Cartography / provenance'],['Mapa/base visual','Map / visual basemap'],['Radio marciano usado para distancias','Martian radius used for distances'],['Motor: A* sobre corredor de búsqueda 2D adaptado al tramo. Estrategias: más directa, equilibrada y menor exposición.','Engine: A* over a 2D search corridor adapted to each leg. Strategies: most direct, balanced and lower exposure.'],['Modelo de duración: velocidad nominal ajustada por pendiente media más tiempos de permanencia en objetivos.','Duration model: nominal speed adjusted by average slope plus target dwell times.'],['Motor V32: A* multicriterio con pendiente direccional, transitabilidad, rugosidad local, incertidumbre/confianza cartográfica y límites duros configurables.','V32 engine: multicriteria A* with directional slope, traversability, local roughness, uncertainty/cartographic confidence and configurable hard limits.'],['Selección científica: los objetivos opcionales se priorizan por valor científico frente al costo incremental de distancia, tiempo, dificultad y confianza de la ruta.','Science selection: optional targets are prioritized by science value versus incremental distance, time, difficulty and route-confidence cost.'],['Modelo de dificultad: combina pendiente, transitabilidad mínima, confianza cartográfica y rugosidad angular. Los límites duros excluyen segmentos del grafo; no son simples penalizaciones.','Difficulty model: combines slope, minimum traversability, cartographic confidence and angular roughness. Hard limits exclude graph segments; they are not simple penalties.'],
+  ['JEZERO V32 es una herramienta de planificación y simulación. Sus índices de transitabilidad, confianza y dificultad NO constituyen una certificación de seguridad para una EVA tripulada.','JEZERO V32 is a planning and simulation tool. Its traversability, confidence and difficulty indices DO NOT constitute a safety certification for crewed EVA.'],['La resolución y calidad de la ruta dependen de los datos de elevación disponibles. MDEM200M es apropiado para planificación regional, no para detectar obstáculos de escala humana como rocas pequeñas, zanjas o bordes locales.','Route resolution and quality depend on available elevation data. MDEM200M is appropriate for regional planning, not for detecting human-scale obstacles such as small rocks, trenches or local edges.'],['El motor V32 bloquea elevación desconocida y puede bloquear baja confianza según el umbral configurado. Aun así, la confianza calculada es una estimación de calidad del muestreo, no una validación de obstáculos a escala humana.','The V32 engine blocks unknown elevation and can block low confidence according to the configured threshold. Calculated confidence remains a sampling-quality estimate, not human-scale obstacle validation.'],['Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V31.','Oxygen, battery, communications, temperature, radiation, real-time localization and metabolic effort are not yet part of the V31 operational calculation.'],
   ['Las siguientes tablas incluyen cada nodo de trayectoria enviado por el motor al informe: coordenadas y elevación cuando está disponible. Esto permite auditar la geometría utilizada en cada estrategia.','The following tables include every path node sent by the engine to the report: coordinates and elevation when available. This allows auditing the geometry used by each strategy.'],['Estrategia','Strategy'],['tramo(s)','leg(s)'],['Elev.','Elev.'],['Pend.','Slope'],['Trans.','Trav.'],['Conf.','Conf.'],['Sin nodos de trayectoria almacenados.','No stored path nodes.'],
+  ['ANÁLISIS DEL TERRENO DE LA MISIÓN','MISSION TERRAIN ANALYSIS'],['PERFIL DE ELEVACIÓN DE LA RUTA','ROUTE ELEVATION PROFILE'],['Elevación inicial','Starting elevation'],['Elevación final','Ending elevation'],['Elevación mínima','Minimum elevation'],['Elevación máxima','Maximum elevation'],['Rango vertical','Vertical relief'],['Sector más exigente','Most demanding sector'],['Distancia con mayor incertidumbre','Distance with greater uncertainty'],['El perfil se construye con los nodos de elevación almacenados por el motor para la estrategia seleccionada.','The profile is built from elevation nodes stored by the engine for the selected strategy.'],
   ['Más directa','Most direct'],['Menor exposición','Lower exposure'],['Equilibrada','Balanced'],['Sin evaluación','Not evaluated'],['Bajo','Low'],['Moderado','Moderate'],['Muy alto','Very high'],['Alto','High'],['OBLIGATORIO','REQUIRED'],['OPCIONAL','OPTIONAL'],['Sí','Yes'],['No','No'],['FUERA DEL LÍMITE CONFIGURADO','OUTSIDE CONFIGURED LIMIT'],['DENTRO DE LOS PARÁMETROS CONFIGURADOS','WITHIN CONFIGURED PARAMETERS'],['Página','Page'],['JEZERO - informe completo de misión generado automáticamente','JEZERO - complete mission report generated automatically'],['No hay secuencia seleccionada disponible.','No selected sequence is available.'],['geologia','geology'],['muestra','sampling'],['imagen','imaging'],['instrumento','instrument'],['otro','other']
 ];
 function trPdfText(value,lang){
@@ -137,10 +177,11 @@ export function buildMissionPdf(report){
     cols.forEach((c,i)=>{ const w=widths[i]; line += trPdfText(String(c ?? ''),lang).slice(0,w).padEnd(w) + (i===cols.length-1?'':'  '); });
     items.push({kind:'text',text:line,bold:header,size:header?7.8:7.4,color:header?'sand':'body'});
   };
+  const terrainProfile=(points)=>items.push({kind:'terrainProfile',points:Array.isArray(points)?points:[]});
 
   // Encabezado / identificación
   items.push({kind:'title',text:'JEZERO',size:22,bold:true,color:'copper'});
-  add('Informe completo de planificación de travesía científica EVA en Marte - motor multicriterio V31',{size:10,bold:true});
+  add('Informe completo de planificación de travesía científica EVA en Marte - motor multicriterio V32',{size:10,bold:true});
   add(`Identificador del informe: ${report.reportId || '--'}`);
   add(`Generado: ${fmtDate(report.generatedAt,locale)}`);
   add(`Versión del sistema: ${report.software?.version || '--'} · Tema de interfaz: ${report.software?.interfaceTheme || '--'} · Idioma: ${lang==='en'?'English':'español'}`);
@@ -177,7 +218,7 @@ export function buildMissionPdf(report){
   add(`Tiempo estimado de desplazamiento: ${fmtHours(travelH)}`);
   add(`Duración total estimada: ${fmtHours(report.selected?.duration)}`);
   add(`Margen operacional restante: ${fmtHours((Number(report.selected?.availableHours)||0)-(Number(report.selected?.duration)||0))}`);
-  add('Oxígeno, batería y control térmico: NO MODELADOS EN V31. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.');
+  add('Oxígeno, batería y control térmico: NO MODELADOS EN V32. JEZERO no inventa estimaciones de recursos que aún no forman parte del motor.');
   rule();
 
   heading('3. TODOS LOS PUNTOS PLANIFICADOS');
@@ -219,7 +260,34 @@ export function buildMissionPdf(report){
   add(`Tiempo disponible: ${fmtHours(report.selected?.availableHours)} · Excede límite: ${report.selected?.overBudget?'Sí':'No'}`);
   rule();
 
-  heading('6. LÍNEA BASE DE OBJETIVOS OBLIGATORIOS');
+  heading('6. ANÁLISIS DEL TERRENO DE LA MISIÓN');
+  const ts=terrainSummary(report.selected);
+  add(`Elevación inicial: ${fmtM(ts.startElevationM)} · Elevación final: ${fmtM(ts.endElevationM)}`);
+  add(`Elevación mínima: ${fmtM(ts.minElevationM)} · Elevación máxima: ${fmtM(ts.maxElevationM)} · Rango vertical: ${fmtM(ts.reliefM)}`);
+  add(`Ascenso acumulado: ${fmtM(sm.gainM)} · Descenso acumulado: ${fmtM(sm.descentM)} · Variación altimétrica acumulada: ${fmtM(sm.elevationChangeM)}`);
+  add(`Pendiente media: ${fmtDeg(sm.avgSlopeDeg)} · máxima subida: ${fmtDeg(sm.maxUphillSlopeDeg)} · máxima bajada: ${fmtDeg(sm.maxDownhillSlopeDeg)}`);
+  add(`Transitabilidad media/mínima: ${finite(sm.avgTransitability)?Number(sm.avgTransitability).toFixed(0):'--'} / ${finite(sm.minTransitability)?Number(sm.minTransitability).toFixed(0):'--'} · Rugosidad angular media: ${fmtDeg(sm.avgRoughnessDeg)}`);
+  add(`Confianza cartográfica media/mínima: ${finite(sm.avgConfidence)?Number(sm.avgConfidence).toFixed(0):'--'}% / ${finite(sm.minConfidence)?Number(sm.minConfidence).toFixed(0):'--'}% · Distancia con mayor incertidumbre: ${fmtKm(sm.uncertainDistanceKm)}`);
+  if(ts.hardest){
+    const hm=ts.hardest.leg.metrics||{};
+    add(`Sector más exigente: Tramo ${ts.hardest.i+1} · ${ts.hardest.leg.from?.name||'Salida'} -> ${ts.hardest.leg.to?.name||'Llegada'} · dificultad ${riskText(ts.hardest.score)} · pendiente máx. ${fmtDeg(hm.maxSlopeDeg)} · transitabilidad mínima ${finite(hm.minTransitability)?Number(hm.minTransitability).toFixed(0):'--'}/100`,{bold:true});
+  }
+  subheading('PERFIL DE ELEVACIÓN DE LA RUTA');
+  add('El perfil se construye con los nodos de elevación almacenados por el motor para la estrategia seleccionada.',{size:7.6});
+  terrainProfile(ts.profile);
+  tableRow(['Tramo','Dist.','Pend.máx','Subida','Bajada','Transit.','Conf.'],[18,10,10,9,9,9,8],{header:true});
+  (report.selected?.legs||[]).forEach((leg,i)=>{
+    const m=leg.metrics||{};
+    tableRow([
+      `${i+1} ${leg.from?.name||'Salida'}>${leg.to?.name||'Llegada'}`,
+      fmtKm(m.distanceKm),fmtDeg(m.maxSlopeDeg),fmtM(m.gainM),fmtM(m.descentM),
+      finite(m.avgTransitability)?Number(m.avgTransitability).toFixed(0):'--',
+      finite(m.avgConfidence)?`${Number(m.avgConfidence).toFixed(0)}%`:'--'
+    ],[18,10,10,9,9,9,8]);
+  });
+  rule();
+
+  heading('7. LÍNEA BASE DE OBJETIVOS OBLIGATORIOS');
   const rb=report.selected?.requiredBaseline;
   if(rb){
     add(`Duración si se visitan únicamente base/objetivos obligatorios: ${fmtHours(rb.duration)}`);
@@ -230,7 +298,7 @@ export function buildMissionPdf(report){
   } else add('No se recibió una línea base independiente para objetivos obligatorios.');
   rule();
 
-  heading('7. COMPARACIÓN DE LAS TRES ESTRATEGIAS');
+  heading('8. COMPARACIÓN DE LAS TRES ESTRATEGIAS');
   tableRow(['Estrategia','Distancia','Duración','Mín. EVA','Dificultad','Estado'],[18,13,13,13,17,11],{header:true});
   (report.strategies||[]).forEach(s=>{
     tableRow([strategyName(s.mode),fmtKm(s.metrics?.distanceKm),fmtHours(s.duration),fmtHours(minEvaHours(s)),riskText(s.score),s.overBudget?'FUERA':'OK'],[18,13,13,13,17,11]);
@@ -242,7 +310,7 @@ export function buildMissionPdf(report){
   });
   rule();
 
-  heading('8. DETALLE DE TRAMOS DE LA ESTRATEGIA SELECCIONADA');
+  heading('9. DETALLE DE TRAMOS DE LA ESTRATEGIA SELECCIONADA');
   (report.selected?.legs||[]).forEach((leg,i)=>{
     const m=leg.metrics||{};
     subheading(`Tramo ${i+1}: ${leg.from?.name || 'Salida'} -> ${leg.to?.name || 'Llegada'}`);
@@ -256,36 +324,36 @@ export function buildMissionPdf(report){
   if(!(report.selected?.legs||[]).length) add('No existen tramos calculados en la estrategia seleccionada.');
   rule();
 
-  heading('9. OBJETIVOS OPCIONALES OMITIDOS');
+  heading('10. OBJETIVOS OPCIONALES OMITIDOS');
   if(report.selected?.omittedOptional?.length){
     report.selected.omittedOptional.forEach((pt,i)=>add(`${i+1}. ${pt.name||'Objetivo'} · ${coordText(pt)} · ${Number(pt.dwellMin||0)} min programados`));
   } else add('No se omitieron objetivos opcionales en la estrategia seleccionada.');
   rule();
 
-  heading('10. DATOS DE FUENTE Y CONFIGURACIÓN TÉCNICA');
+  heading('11. DATOS DE FUENTE Y CONFIGURACIÓN TÉCNICA');
   add(`Modelo de elevación: ${report.dataSources?.elevation || 'MDEM200M mediante ArcGIS ElevationLayer'}`);
   add(`Cartografía / procedencia: ${report.dataSources?.cartography || 'NASA / USGS / ESA / HRSC'}`);
   add(`Mapa/base visual: ${report.dataSources?.map || 'capas configuradas en JEZERO'}`);
   add(`Radio marciano usado para distancias: ${finite(report.dataSources?.marsRadiusKm)?Number(report.dataSources.marsRadiusKm).toFixed(1):'3389.5'} km`);
   add(`Motor: A* sobre corredor de búsqueda 2D adaptado al tramo. Estrategias: más directa, equilibrada y menor exposición.`);
   add(`Modelo de duración: velocidad nominal ajustada por pendiente media más tiempos de permanencia en objetivos.`);
-  add(`Motor V31: A* multicriterio con pendiente direccional, transitabilidad, rugosidad local, incertidumbre/confianza cartográfica y límites duros configurables.`);
+  add(`Motor V32: A* multicriterio con pendiente direccional, transitabilidad, rugosidad local, incertidumbre/confianza cartográfica y límites duros configurables.`);
   add(`Selección científica: los objetivos opcionales se priorizan por valor científico frente al costo incremental de distancia, tiempo, dificultad y confianza de la ruta.`);
   add(`Modelo de dificultad: combina pendiente, transitabilidad mínima, confianza cartográfica y rugosidad angular. Los límites duros excluyen segmentos del grafo; no son simples penalizaciones.`);
   rule();
 
-  heading('11. LIMITACIONES Y SEGURIDAD');
-  add('JEZERO V31 es una herramienta de planificación y simulación. Sus índices de transitabilidad, confianza y dificultad NO constituyen una certificación de seguridad para una EVA tripulada.');
+  heading('12. LIMITACIONES Y SEGURIDAD');
+  add('JEZERO V32 es una herramienta de planificación y simulación. Sus índices de transitabilidad, confianza y dificultad NO constituyen una certificación de seguridad para una EVA tripulada.');
   add('La resolución y calidad de la ruta dependen de los datos de elevación disponibles. MDEM200M es apropiado para planificación regional, no para detectar obstáculos de escala humana como rocas pequeñas, zanjas o bordes locales.');
-  add('El motor V31 bloquea elevación desconocida y puede bloquear baja confianza según el umbral configurado. Aun así, la confianza calculada es una estimación de calidad del muestreo, no una validación de obstáculos a escala humana.');
-  add('Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V29.');
+  add('El motor V32 bloquea elevación desconocida y puede bloquear baja confianza según el umbral configurado. Aun así, la confianza calculada es una estimación de calidad del muestreo, no una validación de obstáculos a escala humana.');
+  add('Oxígeno, batería, comunicaciones, temperatura, radiación, localización en tiempo real y esfuerzo metabólico aún no forman parte del cálculo operativo de V32.');
   rule();
 
   // Apéndice exhaustivo: conserva todos los nodos calculados para las tres estrategias.
-  heading('12. APÉNDICE TÉCNICO - NODOS DE TODAS LAS RUTAS CALCULADAS');
+  heading('13. APÉNDICE TÉCNICO - NODOS DE TODAS LAS RUTAS CALCULADAS');
   add('Las siguientes tablas incluyen cada nodo de trayectoria enviado por el motor al informe: coordenadas y elevación cuando está disponible. Esto permite auditar la geometría utilizada en cada estrategia.');
   (report.strategies||[]).forEach((s,si)=>{
-    subheading(`${12}.${si+1} Estrategia ${strategyName(s.mode)} · ${s.legs?.length ?? 0} tramo(s)`);
+    subheading(`${13}.${si+1} Estrategia ${strategyName(s.mode)} · ${s.legs?.length ?? 0} tramo(s)`);
     (s.legs||[]).forEach((leg,li)=>{
       add(`Tramo ${li+1}: ${leg.from?.name||'Salida'} -> ${leg.to?.name||'Llegada'} · ${fmtKm(leg.metrics?.distanceKm)} · ${fmtHours(leg.durationHours)}`,{bold:true,size:8.2});
       tableRow(['N','Latitud','Longitud','Elev.','Pend.','Trans.','Conf.'],[4,14,14,9,8,8,8],{header:true});
@@ -301,6 +369,7 @@ export function buildMissionPdf(report){
     if(item.kind==='heading') return item.size>=14?23:19;
     if(item.kind==='subheading') return 15;
     if(item.kind==='rule') return 10;
+    if(item.kind==='terrainProfile') return 158;
     if(item.kind==='gap') return item.h||5;
     return item.size>=10?15:item.size>=8.5?12:10.5;
   };
@@ -339,6 +408,28 @@ export function buildMissionPdf(report){
       if(item.kind==='gap'){ y-=item.h||5; continue; }
       if(item.kind==='rule'){
         y-=3; content.push(`${colors.sand} RG 0.45 w ${bodyX} ${y} m ${pageW-margin} ${y} l S`); y-=8; continue;
+      }
+      if(item.kind==='terrainProfile'){
+        const pts=(item.points||[]).filter(p=>finite(p.km)&&finite(p.elevationM));
+        const boxX=bodyX, boxY=y-140, boxW=pageW-margin-bodyX, boxH=132;
+        content.push(`${themeLight} rg ${boxX} ${boxY} ${boxW} ${boxH} re f`);
+        content.push(`${colors.muted} RG 0.5 w ${boxX+34} ${boxY+20} m ${boxX+34} ${boxY+boxH-18} l S`);
+        content.push(`${colors.muted} RG 0.5 w ${boxX+34} ${boxY+20} m ${boxX+boxW-14} ${boxY+20} l S`);
+        if(pts.length>1){
+          const minE=Math.min(...pts.map(p=>Number(p.elevationM))), maxE=Math.max(...pts.map(p=>Number(p.elevationM)));
+          const eSpan=Math.max(1,maxE-minE), maxKm=Math.max(.001,Number(pts[pts.length-1].km));
+          const x0=boxX+34,y0=boxY+20,pw=boxW-50,ph=boxH-42;
+          const xy=pts.map(p=>({x:x0+Number(p.km)/maxKm*pw,y:y0+(Number(p.elevationM)-minE)/eSpan*ph}));
+          content.push(`${colors.copper} RG 1.7 w ${xy[0].x.toFixed(2)} ${xy[0].y.toFixed(2)} m`);
+          for(let i=1;i<xy.length;i++) content.push(`${xy[i].x.toFixed(2)} ${xy[i].y.toFixed(2)} l`);
+          content.push('S');
+          content.push(`BT /F1 7 Tf ${colors.muted} rg ${boxX+4} ${boxY+boxH-16} Td (${esc(`${Math.round(maxE)} m`)}) Tj ET`);
+          content.push(`BT /F1 7 Tf ${colors.muted} rg ${boxX+4} ${boxY+18} Td (${esc(`${Math.round(minE)} m`)}) Tj ET`);
+          content.push(`BT /F1 7 Tf ${colors.muted} rg ${boxX+boxW-58} ${boxY+7} Td (${esc(`${maxKm.toFixed(2)} km`)}) Tj ET`);
+        } else {
+          content.push(`BT /F1 8 Tf ${colors.muted} rg ${boxX+18} ${boxY+60} Td (${esc(trPdfText('Sin datos suficientes para dibujar el perfil de elevación.',lang))}) Tj ET`);
+        }
+        y-=158; continue;
       }
       const size=item.size||9;
       const font=item.bold?'F2':'F1';

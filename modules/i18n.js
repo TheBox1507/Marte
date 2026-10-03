@@ -4,6 +4,24 @@
   const VALID = new Set(['es','en']);
 
   const ES_EN = {
+    'EVA MISSION SYSTEM':'EVA MISSION SYSTEM',
+    'SCIENCE · TERRAIN · NAVIGATION':'SCIENCE · TERRAIN · NAVIGATION',
+    'MISIÓN':'MISSION','MAPA':'MAP','CONFIG.':'SETTINGS',
+    'MAPA Y CAPAS':'MAP & LAYERS','Cartografía científica · NASA / USGS':'Scientific cartography · NASA / USGS',
+    'Exploración cartográfica':'Cartographic exploration','Navega por Marte, consulta referencias y activa las capas de terreno que alimentan la planificación EVA.':'Navigate Mars, inspect references and enable terrain layers used by EVA planning.',
+    'CAPAS DEL MAPA':'MAP LAYERS','CARTOGRAFÍA':'CARTOGRAPHY','TERRENO':'TERRAIN','Corredor y rutas EVA':'EVA corridor & routes','Alternativas calculadas':'Calculated alternatives','Base y objetivos':'Base & targets','Simbología JEZERO':'JEZERO symbology',
+    'Construir misión':'Build mission','Base, objetivos y rutas':'Base, targets and routes',
+    'TIMELINE DE MISIÓN':'MISSION TIMELINE','EVA NAVIGATOR':'EVA NAVIGATOR','NAVEGACIÓN / PLAN ACTIVO':'NAVIGATION / ACTIVE PLAN',
+    'RESULTADOS DE MISIÓN':'MISSION RESULTS','Ruta, ciencia y terreno en una sola lectura':'Route, science and terrain in one view',
+    'Revisa el recorrido seleccionado y genera un documento completo con perfil topográfico y análisis por tramos.':'Review the selected traverse and generate a complete document with terrain profile and leg-by-leg analysis.',
+    'PERFIL DEL TERRENO':'TERRAIN PROFILE','Calcula una misión para generar el perfil.':'Calculate a mission to generate the profile.',
+    'Guardar misión y generar PDF completo':'Save mission and generate complete PDF',
+    'PLAN':'PLAN','SCIENCE RETURN':'SCIENCE RETURN','RETURN RESERVE':'RETURN RESERVE','RUTA ACTIVA':'ACTIVE ROUTE','SIN RUTA':'NO ROUTE',
+    'Corredor EVA':'EVA corridor','Zona visual de navegación':'Visual navigation zone',
+    'TERRENO / CORREDOR EVA':'TERRAIN / EVA CORRIDOR','PEND. MEDIA':'AVG. SLOPE','TRANSIT. MEDIA':'AVG. TRAVERSABILITY','TRANSIT. MÍN.':'MIN. TRAVERSABILITY','CONF. MÍN.':'MIN. CONFIDENCE',
+    'PENDIENTE MÁX.':'MAX. SLOPE','DESNIVEL':'ELEVATION CHANGE','RETORNO':'RETURN',
+    'INCLUIDO':'INCLUDED','OMITIDO POR RESTRICCIONES / UTILIDAD':'OMITTED BY CONSTRAINTS / UTILITY','PENDIENTE DE CÁLCULO':'PENDING CALCULATION',
+    'SIN ID':'NO ID','OBJETIVOS':'TARGETS','RUTA':'ROUTE',
     'PLATAFORMA MODULAR DE TRAVESÍAS CIENTÍFICAS':'MODULAR SCIENTIFIC TRAVERSE PLATFORM',
     'MARTE GLOBAL · NAVEGACIÓN CIENTÍFICA EVA · NASA / USGS':'GLOBAL MARS · EVA SCIENCE NAVIGATION · NASA / USGS',
     'MÓDULO ACTIVO':'ACTIVE MODULE',
@@ -54,8 +72,8 @@
   let mutating = false;
 
   const moduleLabels = {
-    es:{explorer:'EXPLORAR',planner:'PLANIFICADOR DE MISIÓN',science:'CIENCIA',terrain:'TERRENO Y PELIGROS',eva:'NAVEGADOR EVA',control:'CONTROL DE MISIÓN',analysis:'RESULTADOS',settings:'CONFIGURACIÓN'},
-    en:{explorer:'EXPLORE',planner:'MISSION PLANNER',science:'SCIENCE',terrain:'TERRAIN & HAZARDS',eva:'EVA NAVIGATOR',control:'MISSION CONTROL',analysis:'RESULTS',settings:'SETTINGS'}
+    es:{explorer:'MAPA',planner:'MISIÓN',science:'CIENCIA',eva:'EVA',analysis:'RESULTADOS',settings:'CONFIGURACIÓN'},
+    en:{explorer:'MAP',planner:'MISSION',science:'SCIENCE',eva:'EVA',analysis:'RESULTS',settings:'SETTINGS'}
   };
 
   function translatePattern(text, lang=current){

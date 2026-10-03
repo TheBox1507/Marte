@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>JEZERO — Plataforma modular de travesías científicas</title>
+  <title>JEZERO — EVA Mission System</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
   <link rel="icon" href="assets/favicon.ico?v=8" sizes="any">
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
   <link rel="shortcut icon" href="assets/favicon.ico?v=8">
-  <link rel="stylesheet" href="style.css?v=31">
-  <script src="modules/theme.js?v=31"></script>
+  <link rel="stylesheet" href="style.css?v=32">
+  <script src="modules/theme.js?v=32"></script>
 </head>
 <body data-module="planner">
 <header class="topbar">
@@ -18,42 +18,42 @@
     <img class="brandLogo" src="assets/mars-2020-logo.png" alt="Mars 2020">
     <div class="brandText">
       <b>JEZERO</b>
-      <small>PLATAFORMA MODULAR DE TRAVESÍAS CIENTÍFICAS</small>
-      <em>MARTE GLOBAL · NAVEGACIÓN CIENTÍFICA EVA · NASA / USGS</em>
+      <small>EVA MISSION SYSTEM</small>
+      <em>SCIENCE · TERRAIN · NAVIGATION</em>
     </div>
   </div>
-  <div class="topCenter">
-    <span class="topEyebrow">MÓDULO ACTIVO</span>
-    <strong id="activeModuleLabel">PLANIFICADOR DE MISIÓN</strong>
+  <div class="missionHeaderStrip" aria-label="Estado de misión">
+    <div><span>MISIÓN</span><b id="headerMissionCode">SIN ID</b></div>
+    <div><span>OBJETIVOS</span><b id="headerTargetCount">0</b></div>
+    <div><span>RUTA</span><b data-mirror="distance">—</b></div>
+    <div><span>EVA</span><b data-mirror="duration">—</b></div>
+    <div><span>RETORNO</span><b data-mirror="missionMargin">—</b></div>
   </div>
   <div class="topMeta"><span class="liveDot"></span><span id="statusText">DATOS CARTOGRÁFICOS · NASA / USGS</span></div>
 </header>
 
 <main class="appShell">
-  <nav class="moduleRail" aria-label="Módulos de JEZERO">
-    <button class="moduleNav" data-module-target="explorer" title="Explorar"><span>◫</span><small>EXPLORAR</small></button>
-    <button class="moduleNav is-active" data-module-target="planner" title="Planificador de misión"><span>⌁</span><small>PLANIFICAR</small></button>
-    <button class="moduleNav" data-module-target="science" title="Ciencia"><span>⌬</span><small>CIENCIA</small></button>
-    <button class="moduleNav" data-module-target="terrain" title="Terreno y peligros"><span>△</span><small>TERRENO</small></button>
-    <button class="moduleNav" data-module-target="eva" title="Navegador EVA"><span>⌖</span><small>NAVEGADOR EVA</small></button>
-    <button class="moduleNav" data-module-target="control" title="Control de misión"><span>◎</span><small>CONTROL</small></button>
-    <button class="moduleNav" data-module-target="analysis" title="Resultados e informes"><span>▤</span><small>RESULTADOS</small></button>
-    <div class="moduleRailSpacer"></div>
-    <button class="moduleNav" data-module-target="settings" title="Configuración"><span>⚙</span><small>CONFIGURACIÓN</small></button>
+  <nav class="moduleRail" aria-label="Áreas principales de JEZERO">
+    <button class="moduleNav" data-module-target="explorer" title="Mapa"><span>⌖</span><small>MAPA</small></button>
+    <button class="moduleNav is-active" data-module-target="planner" title="Misión"><span>⌁</span><small>MISIÓN</small></button>
+    <button class="moduleNav" data-module-target="science" title="Ciencia"><span>⬡</span><small>CIENCIA</small></button>
+    <button class="moduleNav" data-module-target="eva" title="EVA"><span>▲</span><small>EVA</small></button>
+    <button class="moduleNav" data-module-target="analysis" title="Resultados"><span>▤</span><small>RESULTADOS</small></button>
+    <button class="moduleNav" data-module-target="settings" title="Configuración"><span>⚙</span><small>CONFIG.</small></button>
   </nav>
 
   <aside class="sidebar contextualPanel">
-    <!-- EXPLORER -->
+    <!-- MAPA / EXPLORER -->
     <div class="modulePanel" data-module-panel="explorer">
       <section>
-        <div class="sectionTitle">EXPLORAR / COBERTURA</div>
+        <div class="sectionTitle">MAPA Y CAPAS</div>
         <div class="missionCard">
-          <div class="missionBadge">MAR</div>
-          <div><strong>MARTE GLOBAL</strong><small>Cobertura planetaria · NASA / USGS</small></div>
+          <div class="missionBadge">MARS</div>
+          <div><strong>MARTE GLOBAL</strong><small>Cartografía científica · NASA / USGS</small></div>
         </div>
         <div class="moduleIntro">
-          <b>Explora antes de planificar</b>
-          <p>Navega por Marte, consulta referencias y selecciona un sitio de aterrizaje como punto de partida.</p>
+          <b>Exploración cartográfica</b>
+          <p>Navega por Marte, consulta referencias y activa las capas de terreno que alimentan la planificación EVA.</p>
         </div>
       </section>
 
@@ -66,10 +66,23 @@
         </div>
       </section>
 
+      <section class="layersSection">
+        <div class="sectionTitle">CAPAS DEL MAPA</div>
+        <div class="layerGroupLabel">CARTOGRAFÍA</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
+        <div class="layerGroupLabel">TERRENO</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente</strong><small>Derivada del DEM</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad</strong><small>Variación local</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
+        <div class="layerGroupLabel">MISIÓN</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Corredor y rutas EVA</strong><small>Alternativas calculadas</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Base y objetivos</strong><small>Simbología JEZERO</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
+        <div class="layerGroupLabel">REFERENCIAS</div>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="known" checked><span class="layerCopy"><strong>Ubicaciones conocidas</strong><small>Regiones destacadas</small></span></span><b class="layerStatus live" data-layer-status="known">ACTIVA</b></label>
+        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="landing" checked><span class="layerCopy"><strong>Sitios de aterrizaje</strong><small>Misiones NASA</small></span></span><b class="layerStatus live" data-layer-status="landing">ACTIVA</b></label>
+      </section>
+
       <section class="quickModuleLinks">
-        <div class="sectionTitle">SIGUIENTE PASO</div>
-        <button class="moduleJump" data-jump-module="planner"><span>⌁</span><div><b>Planificar una EVA</b><small>Crear base, objetivos y recorrido</small></div></button>
-        <button class="moduleJump" data-jump-module="terrain"><span>△</span><div><b>Analizar el terreno</b><small>Pendiente, rugosidad y transitabilidad</small></div></button>
+        <button class="moduleJump" data-jump-module="planner"><span>⌁</span><div><b>Construir misión</b><small>Base, objetivos y rutas</small></div></button>
       </section>
 
       <a class="dataButton" id="sourcesBtn" href="https://science.nasa.gov/mission/mars-2020-perseverance/location-map/" target="_blank" rel="noreferrer">FUENTES NASA ↗</a>
@@ -131,6 +144,11 @@
         <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
         <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
       </section>
+
+      <section class="missionTimelinePanel">
+        <div class="sectionTitle">TIMELINE DE MISIÓN</div>
+        <div id="missionTimeline" class="missionTimeline"><div class="timelineEmpty">BASE → OBJETIVOS → REGRESO</div></div>
+      </section>
     </div>
 
     <!-- SCIENCE -->
@@ -159,34 +177,12 @@
       </section>
     </div>
 
-    <!-- TERRAIN -->
-    <div class="modulePanel" data-module-panel="terrain">
-      <section>
-        <div class="sectionTitle">TERRENO Y PELIGROS</div>
-        <div class="moduleIntro hazardTone"><b>Mapa de transitabilidad</b><p>Activa las capas derivadas para estudiar el terreno. En esta versión, pendiente y rugosidad se calculan desde el DEM global.</p></div>
-      </section>
-      <section class="layersSection">
-        <div class="layerGroupLabel">BASE CARTOGRÁFICA</div>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="mola" checked><span class="layerCopy"><strong>Relieve MOLA + HRSC</strong><small>Base global</small></span></span><b class="layerStatus live" data-layer-status="mola">ACTIVA</b></label>
-        <div class="layerGroupLabel">ANÁLISIS DEL TERRENO</div>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="slope"><span class="layerCopy"><strong>Pendiente calculada</strong><small>Derivada del DEM global</small></span></span><b class="layerStatus ready" data-layer-status="slope">ACERCA PARA ANALIZAR</b></label>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="roughness"><span class="layerCopy"><strong>Rugosidad calculada</strong><small>Variación local de elevación</small></span></span><b class="layerStatus ready" data-layer-status="roughness">ACERCA PARA ANALIZAR</b></label>
-        <div class="layerGroupLabel">REFERENCIAS</div>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="known" checked><span class="layerCopy"><strong>Ubicaciones conocidas</strong><small>Regiones de referencia</small></span></span><b class="layerStatus live" data-layer-status="known">ACTIVA</b></label>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="landing" checked><span class="layerCopy"><strong>Sitios de aterrizaje</strong><small>Misiones NASA</small></span></span><b class="layerStatus live" data-layer-status="landing">ACTIVA</b></label>
-        <div class="layerGroupLabel">OPERACIÓN</div>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="route" checked><span class="layerCopy"><strong>Rutas calculadas</strong><small>Alternativas de misión</small></span></span><b class="layerStatus live" data-layer-status="route">ACTIVA</b></label>
-        <label class="layerRow"><span class="check"><input type="checkbox" data-layer="points" checked><span class="layerCopy"><strong>Puntos de misión</strong><small>Base y objetivos</small></span></span><b class="layerStatus live" data-layer-status="points">ACTIVA</b></label>
-      </section>
-      <section class="roadmapCard"><span class="roadmapBadge">V29 ACTIVO</span><b>Transitabilidad e incertidumbre</b><p>El motor combina pendiente direccional, rugosidad local, confianza cartográfica y límites duros. Si un segmento viola los límites, A* no puede atravesarlo.</p></section>
-    </div>
-
     <!-- EVA -->
     <div class="modulePanel" data-module-panel="eva">
       <section>
-        <div class="sectionTitle">NAVEGADOR EVA</div>
+        <div class="sectionTitle">EVA NAVIGATOR</div>
         <div class="evaHero">
-          <span class="evaEyebrow">SIGUIENTE OBJETIVO</span>
+          <span class="evaEyebrow">NAVEGACIÓN / PLAN ACTIVO</span>
           <b data-mirror="routeName">Esperando misión</b>
           <strong data-mirror="distance">—</strong>
           <small data-mirror="duration">—</small>
@@ -201,36 +197,34 @@
         <button id="evaReturnHome" class="returnHomeAction"><span>⌂</span><div><b>REGRESAR A BASE</b><small>Recalcular la misión asegurando el retorno a la base</small></div></button>
         <button class="moduleJump" data-jump-module="planner"><span>⌁</span><div><b>Editar la misión</b><small>Ajustar puntos y restricciones</small></div></button>
       </section>
-      <p class="safetyNote">El Navegador EVA es todavía un modo de planificación y simulación. No constituye navegación humana certificada.</p>
+      <div class="evaAlertStrip"><span>TERRENO</span><b data-mirror="riskLabel">SIN EVALUACIÓN</b><span>TRANSIT.</span><b data-mirror="avgTransitability">—</b></div>
+      <p class="safetyNote">Modo de planificación y simulación. No constituye navegación humana certificada.</p>
     </div>
 
-    <!-- CONTROL -->
-    <div class="modulePanel" data-module-panel="control">
-      <section><div class="sectionTitle">CONTROL DE MISIÓN</div><div class="moduleIntro controlTone"><b>Vista operacional</b><p>Panel pensado para seguir tripulación, progreso, alertas y eventos de una EVA.</p></div></section>
-      <section class="controlBoard">
-        <div><span>PLAN ACTIVO</span><b data-mirror="routeName">Esperando misión</b></div>
-        <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
-        <div><span>TRAMOS</span><b data-mirror="legsCount">—</b></div>
-        <div><span>ESTADO</span><b data-mirror="routeStatus">SIN RUTA</b></div>
-      </section>
-      <section class="roadmapCard"><span class="roadmapBadge">V29+</span><b>Telemetría y localización</b><p>Preparado para posición de EV1/EV2, comunicaciones, recursos del traje y eventos de misión.</p></section>
-    </div>
-
-    <!-- ANALYSIS / RESULTS -->
+    <!-- RESULTS -->
     <div class="modulePanel" data-module-panel="analysis">
       <section>
-        <div class="sectionTitle">RESULTADOS</div>
-        <div class="moduleIntro"><b>Análisis y documentación en un solo lugar</b><p>Revisa el resultado seleccionado, guarda la misión y genera el informe PDF sin cambiar de módulo.</p></div>
+        <div class="sectionTitle">RESULTADOS DE MISIÓN</div>
+        <div class="moduleIntro"><b>Ruta, ciencia y terreno en una sola lectura</b><p>Revisa el recorrido seleccionado y genera un documento completo con perfil topográfico y análisis por tramos.</p></div>
       </section>
       <section class="analysisGrid resultsGrid">
         <div><span>DISTANCIA</span><b data-mirror="distance">—</b></div>
         <div><span>DURACIÓN</span><b data-mirror="duration">—</b></div>
-        <div><span>DIFICULTAD</span><b data-mirror="riskLabel">—</b></div>
         <div><span>TRANSITABILIDAD</span><b data-mirror="avgTransitability">—</b></div>
         <div><span>CONFIANZA</span><b data-mirror="avgConfidence">—</b></div>
         <div><span>CIENCIA</span><b data-mirror="scienceValueTotal">—</b></div>
+        <div><span>RETORNO</span><b data-mirror="missionMargin">—</b></div>
       </section>
-      <button class="action saveAction resultsSave" id="saveMission" disabled><span>▣</span> Guardar misión y generar PDF</button>
+      <section class="terrainResultCard">
+        <div class="sectionTitle">PERFIL DEL TERRENO</div>
+        <div id="terrainProfileMini" class="terrainProfileMini"><span>Calcula una misión para generar el perfil.</span></div>
+        <div class="terrainQuickStats">
+          <div><span>PENDIENTE MÁX.</span><b data-mirror="maxSlope">—</b></div>
+          <div><span>DESNIVEL</span><b data-mirror="gain">—</b></div>
+          <div><span>DIFICULTAD</span><b data-mirror="riskLabel">—</b></div>
+        </div>
+      </section>
+      <button class="action saveAction resultsSave" id="saveMission" disabled><span>▣</span> Guardar misión y generar PDF completo</button>
       <section class="historyPanel"><div class="sectionTitle">HISTORIAL DE MISIONES</div><div id="historyList" class="historyList"></div><p class="sideNote">El historial se conserva localmente en este navegador.</p></section>
     </div>
 
@@ -313,6 +307,12 @@
       </div>
       <div class="mapActions"><button id="zoomIn">＋</button><button id="zoomOut">−</button><button id="center">⌖ Centro</button></div>
     </div>
+    <div class="missionHud" id="missionHud">
+      <div class="missionHudCell"><span>PLAN</span><b id="hudPlan">SIN RUTA</b></div>
+      <div class="missionHudCell"><span>SCIENCE RETURN</span><b id="hudScience">—</b></div>
+      <div class="missionHudCell"><span>TRANSITABILIDAD</span><b id="hudTransit">—</b></div>
+      <div class="missionHudCell return"><span>RETURN RESERVE</span><b id="hudReturn">—</b></div>
+    </div>
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
     <div class="mapOverlay topLeft"><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
@@ -329,6 +329,7 @@
         <div class="legendItem"><span class="legendSymbol required">P</span><span><b>Objetivo obligatorio</b><small>Debe formar parte del recorrido</small></span></div>
         <div class="legendItem"><span class="legendSymbol optional">P</span><span><b>Objetivo opcional</b><small>Puede omitirse</small></span></div>
         <div class="mapLegendGroupTitle">RUTAS</div>
+        <div class="legendItem"><span class="legendCorridor"></span><span><b>Corredor EVA</b><small>Zona visual de navegación</small></span></div>
         <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta seleccionada</b><small>Alternativa analizada</small></span></div>
         <div class="legendItem"><span class="legendLine direct"></span><span><b>Más directa</b><small>Prioriza distancia</small></span></div>
         <div class="legendItem"><span class="legendLine balanced"></span><span><b>Equilibrada</b><small>Distancia + terreno</small></span></div>
@@ -385,6 +386,20 @@
         <button class="primary recalcAction" id="recalculate" disabled><span>↻</span> Recalcular misión</button>
         <div class="calcMeta"><b id="calcParams">—</b><small id="lastCalculated">Último cálculo: —</small></div>
       </section>
+      <section class="card terrainInstrument">
+        <div class="sectionTitle">TERRENO / CORREDOR EVA</div>
+        <div class="terrainInstrumentGrid">
+          <div><span>PEND. MEDIA</span><b id="avgSlope">—</b></div>
+          <div><span>TRANSIT. MEDIA</span><b id="avgTransitability">—</b></div>
+          <div><span>TRANSIT. MÍN.</span><b id="minTransitabilityMetric">—</b></div>
+          <div><span>CONFIANZA</span><b id="avgConfidence">—</b></div>
+          <div><span>CONF. MÍN.</span><b id="minConfidenceMetric">—</b></div>
+          <div><span>CIENCIA</span><b id="scienceValueTotal">—</b></div>
+        </div>
+        <div class="riskBar"><i id="riskBar"></i></div>
+        <div class="terrainInstrumentFooter"><span id="riskLabel">Sin evaluación</span><b id="riskNumber">—</b></div>
+        <span id="segments" class="hiddenMetric">—</span><span id="missionMargin" class="hiddenMetric">—</span>
+      </section>
     </div>
 
     <!-- Science details -->
@@ -393,41 +408,16 @@
       <section class="card"><div class="sectionTitle">CÓMO AFECTA LA RUTA</div><div class="flowSteps"><span>1</span><p><b>Valor científico</b><small>Mayor valor aumenta la prioridad de un objetivo opcional.</small></p><span>2</span><p><b>Tiempo de trabajo</b><small>Se suma a la duración total de la EVA.</small></p><span>3</span><p><b>Obligatoriedad</b><small>Un objetivo obligatorio debe incluirse para que la misión sea válida.</small></p></div></section>
     </div>
 
-    <!-- Terrain details -->
-    <div class="modulePanel" data-module-panel="terrain">
-      <section class="card riskCard">
-        <div class="sectionTitle">DIFICULTAD TOPOGRÁFICA EXPERIMENTAL</div>
-        <div class="riskRow"><div class="riskNumber" id="riskNumber">—</div><div><b id="riskLabel">Sin evaluación</b><small id="riskBasis">Derivada del DEM global MDEM200M. No certifica seguridad humana.</small></div></div>
-        <div class="riskBar"><i id="riskBar"></i></div>
-        <div class="row"><span>Pendiente media</span><b id="avgSlope">—</b></div>
-        <div class="row"><span>Segmentos evaluados</span><b id="segments">—</b></div>
-        <div class="row"><span>Margen operacional</span><b id="missionMargin">—</b></div>
-        <div class="row"><span>Transitabilidad media</span><b id="avgTransitability">—</b></div>
-        <div class="row"><span>Transitabilidad mínima</span><b id="minTransitabilityMetric">—</b></div>
-        <div class="row"><span>Confianza cartográfica media</span><b id="avgConfidence">—</b></div>
-        <div class="row"><span>Confianza mínima</span><b id="minConfidenceMetric">—</b></div>
-        <div class="row"><span>Valor científico incluido</span><b id="scienceValueTotal">—</b></div>
-        <div class="row"><span>Fuente del relieve</span><b>MDEM200M · 200 m</b></div>
-      </section>
-      <section class="card"><div class="sectionTitle">PRINCIPIO DE SEGURIDAD</div><div class="stateLegend"><span class="safe">SEGURO</span><span class="unsafe">NO SEGURO</span><span class="unknown">DESCONOCIDO</span></div><p>La arquitectura reserva explícitamente el estado DESCONOCIDO para futuras capas de peligros y datos incompletos.</p></section>
-    </div>
-
     <!-- EVA details -->
     <div class="modulePanel" data-module-panel="eva">
       <section class="card evaStatusCard"><div class="sectionTitle">ESTADO EVA</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeStatus">SIN RUTA</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>RESERVA DE RETORNO</span><b data-mirror="missionMargin">—</b></div><div class="evaStatusLine"><span>TOPOGRAFÍA</span><b data-mirror="riskLabel">Sin evaluación</b></div></section>
       <section class="card"><div class="sectionTitle">RECURSOS EVA</div><div class="resourcePlaceholder"><span>O₂</span><i></i><b>FUTURO</b></div><div class="resourcePlaceholder"><span>BATERÍA</span><i></i><b>FUTURO</b></div><div class="resourcePlaceholder"><span>CONTROL TÉRMICO</span><i></i><b>FUTURO</b></div><p>Los recursos se separarán del motor de rutas para que el Planificador, el Navegador EVA y Control de misión consuman el mismo estado.</p></section>
     </div>
 
-    <!-- Control details -->
-    <div class="modulePanel" data-module-panel="control">
-      <section class="card"><div class="sectionTitle">TRIPULACIÓN / TELEMETRÍA</div><div class="crewRow"><span class="crewDot standby"></span><div><b>EV1</b><small>Sin telemetría conectada</small></div></div><div class="crewRow"><span class="crewDot standby"></span><div><b>EV2</b><small>Sin telemetría conectada</small></div></div></section>
-      <section class="card"><div class="sectionTitle">EVENTOS DE MISIÓN</div><div class="historyEmpty">Aún no existe un registro operativo en tiempo real. Este panel queda desacoplado para implementarlo sin alterar el mapa.</div></section>
-    </div>
-
     <!-- Results details -->
     <div class="modulePanel" data-module-panel="analysis">
       <section class="card"><div class="sectionTitle">RESULTADO DE LA RUTA</div><div class="metricGrid"><div><small>RIESGO / DIFICULTAD</small><strong data-mirror="riskNumber">—</strong></div><div><small>PENDIENTE MEDIA</small><strong data-mirror="avgSlope">—</strong></div><div><small>TRANSITABILIDAD</small><strong data-mirror="avgTransitability">—</strong></div><div><small>CONFIANZA</small><strong data-mirror="avgConfidence">—</strong></div><div><small>VALOR CIENTÍFICO</small><strong data-mirror="scienceValueTotal">—</strong></div><div><small>MARGEN</small><strong data-mirror="missionMargin">—</strong></div></div></section>
-      <section class="card"><div class="sectionTitle">DOCUMENTO DE MISIÓN</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF incluye identificación de misión, parámetros, objetivos científicos, estrategias, métricas, tramos, coordenadas, nodos de ruta, fuentes y limitaciones.</p></section>
+      <section class="card"><div class="sectionTitle">DOCUMENTO DE MISIÓN</div><div class="evaStatusLine"><span>RUTA</span><b data-mirror="routeName">Esperando misión</b></div><div class="evaStatusLine"><span>DISTANCIA</span><b data-mirror="distance">—</b></div><div class="evaStatusLine"><span>DURACIÓN</span><b data-mirror="duration">—</b></div><p>El PDF incluye identificación, ciencia, estrategias, perfil de elevación, métricas del terreno, sector más exigente, análisis tramo por tramo, nodos de ruta, fuentes y limitaciones.</p></section>
     </div>
 
     <!-- Settings details -->
@@ -443,8 +433,8 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="modules/i18n.js?v=31"></script>
-<script src="script.js?v=31"></script>
-<script src="modules/module-shell.js?v=31"></script>
+<script src="modules/i18n.js?v=32"></script>
+<script src="script.js?v=32"></script>
+<script src="modules/module-shell.js?v=32"></script>
 </body>
 </html>

@@ -1,12 +1,10 @@
 (() => {
-  const MODULE_KEY = 'jezero-active-module-v31';
+  const MODULE_KEY = 'jezero-active-module-v32';
   const labels = {
-    explorer: 'EXPLORAR',
-    planner: 'PLANIFICADOR DE MISIÓN',
+    explorer: 'MAPA',
+    planner: 'MISIÓN',
     science: 'CIENCIA',
-    terrain: 'TERRENO Y PELIGROS',
-    eva: 'NAVEGADOR EVA',
-    control: 'CONTROL DE MISIÓN',
+    eva: 'EVA',
     analysis: 'RESULTADOS',
     settings: 'CONFIGURACIÓN'
   };
@@ -118,8 +116,9 @@
   }
 
   setupMirrors();
-  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
-  const initial = initialRaw === 'reports' ? 'analysis' : initialRaw;
+  const initialRaw = localStorage.getItem(MODULE_KEY) || localStorage.getItem('jezero-active-module-v31') || localStorage.getItem('jezero-active-module-v30') || localStorage.getItem('jezero-active-module-v29') || localStorage.getItem('jezero-active-module-v28');
+  const migrated = initialRaw === 'reports' ? 'analysis' : initialRaw === 'terrain' ? 'explorer' : initialRaw === 'control' ? 'eva' : initialRaw;
+  const initial = migrated;
   activateModule(validModule(initial) ? initial : 'planner', {save:false, openMobile:false});
 
   window.addEventListener('jezero:languagechange',()=>activateModule(document.body.dataset.module||'planner',{save:false,openMobile:false}));

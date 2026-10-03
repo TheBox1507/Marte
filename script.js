@@ -26,7 +26,7 @@ const themeInfo = () => window.JEZERO_THEMES?.getThemeInfo?.(uiLang()) || {key:'
 const themeColors = () => window.JEZERO_THEMES?.getColors?.() || themeInfo().colors;
 
 window.addEventListener('jezero:themechange',()=>{
-  markerLayer?.changed?.(); routeLayer?.changed?.(); knownLayer?.changed?.(); landingLayer?.changed?.();
+  markerLayer?.changed?.(); routeLayer?.changed?.(); knownLayer?.changed?.(); landingLayer?.changed?.(); renderTerrainProfile(selectedMission?.());
   if(typeof updateSettingsSummary==='function') updateSettingsSummary();
 });
 
@@ -102,18 +102,40 @@ function initMap(){
   drawPointMarkers();
   populateReferenceLayers();
 }
+function hexAlpha(hex,alpha='33'){
+  const value=String(hex||'').trim();
+  return /^#[0-9a-f]{6}$/i.test(value) ? `${value}${alpha}` : value;
+}
 function pointStyle(kind,label){
   const c=themeColors();
   const color = kind==='base' ? c.success : kind==='reference' ? c.primary2 : kind==='optional' ? c.accent2 : c.accent;
+  const stroke=new ol.style.Stroke({color:c.text||'#ffffff',width:2});
+  let image;
+  if(kind==='base'){
+    image=new ol.style.RegularShape({points:4,radius:10,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke});
+  } else if(kind==='science'){
+    image=new ol.style.RegularShape({points:6,radius:10,angle:Math.PI/6,fill:new ol.style.Fill({color}),stroke});
+  } else if(kind==='optional'){
+    image=new ol.style.RegularShape({points:4,radius:9,angle:0,fill:new ol.style.Fill({color}),stroke});
+  } else {
+    image=new ol.style.Circle({radius:8,fill:new ol.style.Fill({color}),stroke});
+  }
   return new ol.style.Style({
-    image:new ol.style.Circle({ radius:9, fill:new ol.style.Fill({color}), stroke:new ol.style.Stroke({color:c.text||'#ffffff',width:2}) }),
-    text:new ol.style.Text({ text:label||'P', offsetY:-19, fill:new ol.style.Fill({color:c.text||'#ffffff'}), stroke:new ol.style.Stroke({color:c.bg||'#101010',width:4}), font:'800 11px Inter,Segoe UI,sans-serif' })
+    image,
+    text:new ol.style.Text({ text:label||'P', offsetY:-20, fill:new ol.style.Fill({color:c.text||'#ffffff'}), stroke:new ol.style.Stroke({color:c.bg||'#101010',width:4}), font:'800 11px "DM Mono",Consolas,monospace' })
   });
 }
 function routeStyle(selected,kind){
   const c=themeColors();
   const color = selected ? c.accent : kind==='risk' ? c.success : kind==='distance' ? c.text : c.accent2;
-  return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:selected?6:2.5, lineDash:selected?undefined:[9,8]}) });
+  if(selected){
+    return [
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'2b'),width:18,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','b8'),width:9,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color,width:4.8,lineCap:'round',lineJoin:'round'})})
+    ];
+  }
+  return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:2.2, lineDash:[9,8]}) });
 }
 
 function knownLocationStyle(feature){
@@ -590,6 +612,7 @@ async function chooseSequence(mode,basePoints,returnBase,params,legCache){
   const requiredSeq=sequenceWithReturn(requiredPoints,returnBase);
   const requiredMission=await evaluateSequence(requiredSeq,mode,params,legCache);
   let includedCandidates=[];
+  let scienceDecisions=[];
   let currentSeq=requiredSeq;
   let currentMission=requiredMission;
   let remaining=basePoints.map((p,i)=>({p,i})).filter(x=>x.i>0&&!x.p.required);
@@ -624,7 +647,19 @@ async function chooseSequence(mode,basePoints,returnBase,params,legCache){
       if(!best || utility>best.utility) best={candidate,trialSeq,trialMission,utility};
     }
     if(!best) break;
+    const before=currentMission;
     includedCandidates.push(best.candidate);
+    scienceDecisions.push({
+      pointIndex:best.candidate.i,
+      name:best.candidate.p.name,
+      included:true,
+      utility:best.utility,
+      deltaDistanceKm:Math.max(0,best.trialMission.metrics.distanceKm-before.metrics.distanceKm),
+      deltaDurationHours:Math.max(0,best.trialMission.duration-before.duration),
+      deltaDifficulty:Math.max(0,(best.trialMission.score??0)-(before.score??0)),
+      confidence:Number(best.trialMission.metrics.avgConfidence??0),
+      scienceValue:clamp(Number(best.candidate.p.scienceValue??50),0,100)
+    });
     currentSeq=best.trialSeq;
     currentMission=best.trialMission;
     remaining=remaining.filter(x=>x.i!==best.candidate.i);
@@ -632,7 +667,15 @@ async function chooseSequence(mode,basePoints,returnBase,params,legCache){
   const finalMission = currentMission;
   const includedSet=new Set(currentSeq.map(p=>`${p.lat.toFixed(5)},${p.lon.toFixed(5)}`));
   const omittedOptional=basePoints.filter((p,i)=>i>0&&!p.required&&!includedSet.has(`${p.lat.toFixed(5)},${p.lon.toFixed(5)}`));
+  for(const item of remaining){
+    scienceDecisions.push({
+      pointIndex:item.i,name:item.p.name,included:false,utility:0,
+      deltaDistanceKm:null,deltaDurationHours:null,deltaDifficulty:null,
+      confidence:null,scienceValue:clamp(Number(item.p.scienceValue??50),0,100)
+    });
+  }
   finalMission.omittedOptional=omittedOptional;
+  finalMission.scienceDecisions=scienceDecisions;
   finalMission.includedPoints=currentSeq;
   finalMission.requiredBaseline=requiredMission;
   finalMission.availableHours=available;
@@ -713,6 +756,78 @@ function drawMissionRoutes(mission,selectedMode){
     source.addFeature(new ol.Feature({geometry:new ol.geom.LineString(leg.path.map(p=>[p.lon,p.lat])),selected:mode===selectedMode,kind:mode,leg:index+1}));
   }));
 }
+
+function selectedMission(){
+  const mode=document.querySelector('input[name="mode"]:checked')?.value||'balanced';
+  return currentMission?.[mode]||null;
+}
+function missionPathNodes(mission){
+  const out=[];
+  (mission?.legs||[]).forEach((leg,li)=>{
+    (leg.path||[]).forEach((node,ni)=>{
+      if(li>0 && ni===0) return;
+      out.push(node);
+    });
+  });
+  return out;
+}
+function profileSeries(mission){
+  const nodes=missionPathNodes(mission);
+  const series=[];
+  let km=0,prev=null;
+  for(const node of nodes){
+    if(prev) km+=haversine(prev,node);
+    if(Number.isFinite(Number(node.elevationM))) series.push({km,elevationM:Number(node.elevationM)});
+    prev=node;
+  }
+  return series;
+}
+function renderTerrainProfile(mission){
+  const host=$('terrainProfileMini'); if(!host) return;
+  const pts=profileSeries(mission);
+  if(pts.length<2){host.innerHTML=`<span>${ui('Calcula una misión para generar el perfil.','Calculate a mission to generate the profile.')}</span>`;return;}
+  const minE=Math.min(...pts.map(x=>x.elevationM)),maxE=Math.max(...pts.map(x=>x.elevationM));
+  const span=Math.max(1,maxE-minE),maxKm=Math.max(.001,pts.at(-1).km);
+  const W=520,H=150,padX=30,padY=18,plotW=W-padX*2,plotH=H-padY*2;
+  const coords=pts.map(p=>`${(padX+p.km/maxKm*plotW).toFixed(1)},${(padY+(maxE-p.elevationM)/span*plotH).toFixed(1)}`).join(' ');
+  const fill=`${padX},${H-padY} ${coords} ${W-padX},${H-padY}`;
+  const c=themeColors();
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ui('Perfil de elevación de la ruta','Route elevation profile')}">
+    <defs><linearGradient id="jezeroProfileFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.accent2}" stop-opacity=".42"/><stop offset="1" stop-color="${c.accent2}" stop-opacity=".04"/></linearGradient></defs>
+    <line x1="${padX}" y1="${padY}" x2="${padX}" y2="${H-padY}" class="profileAxis"/>
+    <line x1="${padX}" y1="${H-padY}" x2="${W-padX}" y2="${H-padY}" class="profileAxis"/>
+    <polygon points="${fill}" fill="url(#jezeroProfileFill)"/>
+    <polyline points="${coords}" fill="none" stroke="${c.accent}" stroke-width="3" vector-effect="non-scaling-stroke"/>
+    <text x="${padX}" y="12">${Math.round(maxE)} m</text>
+    <text x="${padX}" y="${H-3}">${Math.round(minE)} m</text>
+    <text x="${W-padX}" y="${H-3}" text-anchor="end">${maxKm.toFixed(2)} km</text>
+  </svg>`;
+}
+function renderMissionTimeline(mission){
+  const host=$('missionTimeline'); if(!host) return;
+  const seq=mission?.includedPoints||mission?.sequence||missionPoints;
+  if(!seq?.length){host.innerHTML='<div class="timelineEmpty">BASE → OBJETIVOS → REGRESO</div>';return;}
+  host.innerHTML=seq.map((p,i)=>{
+    const base=p.type==='base'||i===0;
+    const cls=base?'base':p.required?'required':'optional';
+    const code=base?(i===seq.length-1&&i>0?'HOME':'BASE'):`S${String(i).padStart(2,'0')}`;
+    return `<div class="timelineNode ${cls}"><span>${code}</span><b>${escapeHtml(p.name||code)}</b></div>${i<seq.length-1?'<i class="timelineLink"></i>':''}`;
+  }).join('');
+}
+function updateMissionHud(mission){
+  const m=mission?.metrics||{};
+  const available=mission?.availableHours ?? (mission?.params?availableMissionHours(mission.params):null);
+  const margin=Number.isFinite(available)&&Number.isFinite(mission?.duration)?available-mission.duration:null;
+  if($('hudPlan')) $('hudPlan').textContent=mission?ui('RUTA ACTIVA','ACTIVE ROUTE'):ui('SIN RUTA','NO ROUTE');
+  if($('hudScience')) $('hudScience').textContent=mission&&Number.isFinite(mission.scienceEfficiency)?`${Math.round(mission.scienceEfficiency)}%`:'—';
+  if($('hudTransit')) $('hudTransit').textContent=Number.isFinite(m.avgTransitability)?`${Math.round(m.avgTransitability)}/100`:'—';
+  if($('hudReturn')) $('hudReturn').textContent=Number.isFinite(margin)?formatSignedMargin(margin):'—';
+}
+function updateHeaderStatus(){
+  const meta=getMissionSettings?.()||{};
+  if($('headerMissionCode')) $('headerMissionCode').textContent=meta.missionCode||meta.missionName||ui('SIN ID','NO ID');
+  if($('headerTargetCount')) $('headerTargetCount').textContent=String(scienceTargets().length);
+}
 function renderMission(mission){
   const m=mission.metrics,score=mission.score,available=mission.availableHours ?? availableMissionHours(mission.params||normalizeParams()),margin=available-mission.duration;
   const included=mission.includedPoints?.length ?? mission.sequence?.length ?? mission.legs.length+1;
@@ -729,6 +844,10 @@ function renderMission(mission){
   $('riskNumber').textContent=Number.isFinite(score)?score:'—'; $('riskLabel').textContent=Number.isFinite(score)?riskLabel(score):'Sin evaluación'; $('riskBar').style.width=`${Number.isFinite(score)?score:0}%`; $('avgSlope').textContent=Number.isFinite(m.avgSlopeDeg)?`${m.avgSlopeDeg.toFixed(1)}°`:'—'; $('segments').textContent=m.segments; $('legsCount').textContent=mission.legs.length; $('dwellTotal').textContent=`${Number.isFinite(mission.dwellMinutes)?mission.dwellMinutes:0} min`; $('missionMargin').textContent=formatSignedMargin(margin); if($('avgTransitability'))$('avgTransitability').textContent=Number.isFinite(m.avgTransitability)?`${m.avgTransitability.toFixed(0)}/100`:'—'; if($('minTransitabilityMetric'))$('minTransitabilityMetric').textContent=Number.isFinite(m.minTransitability)?`${m.minTransitability.toFixed(0)}/100`:'—'; if($('avgConfidence'))$('avgConfidence').textContent=Number.isFinite(m.avgConfidence)?`${m.avgConfidence.toFixed(0)}%`:'—'; if($('minConfidenceMetric'))$('minConfidenceMetric').textContent=Number.isFinite(m.minConfidence)?`${m.minConfidence.toFixed(0)}%`:'—'; if($('scienceValueTotal'))$('scienceValueTotal').textContent=Number.isFinite(mission.scienceValueTotal)?`${Math.round(mission.scienceValueTotal)} pts`:'—';
   $('calcParams').textContent=`${mission.params.speed.toFixed(1)} km/h · EVA ${mission.params.evaTime.toFixed(1)} h · margen ${mission.params.returnMargin}% · pendiente ≤${mission.params.maxSlopeLimit.toFixed(0)}° · transit. ≥${mission.params.minTransitability.toFixed(0)} · confianza ≥${mission.params.minConfidence.toFixed(0)}%`; 
   updateScienceSummary(mission);
+  renderMissionTimeline(mission);
+  renderTerrainProfile(mission);
+  updateMissionHud(mission);
+  updateHeaderStatus();
   $('recalculate').disabled=false; $('saveMission').disabled=false;
   if($('lastCalculated')) $('lastCalculated').textContent=lastCalculatedAt?`Último cálculo: ${lastCalculatedAt.toLocaleString('es-NI',{dateStyle:'short',timeStyle:'short'})}`:'Último cálculo: —';
 }
@@ -757,7 +876,11 @@ function updatePlanningUI(){
   $('pointCount').textContent=missionPoints.length; $('calculate').disabled=busy||missionPoints.length<2; $('saveMission').disabled=busy||!currentMission;
   $('selectionHint').textContent=selecting?`Modo misión activo · toca el mapa para agregar el punto ${missionPoints.length+1}.`:(missionPoints.length?`${missionPoints.length} puntos planificados · puedes agregar más o calcular la misión.`:'Activa “Nueva misión” y toca el mapa para agregar puntos.');
   renderScienceEditor();
-  updateScienceSummary(currentMission?.[document.querySelector('input[name="mode"]:checked')?.value||'balanced']||null);
+  const active=currentMission?.[document.querySelector('input[name="mode"]:checked')?.value||'balanced']||null;
+  updateScienceSummary(active);
+  renderMissionTimeline(active);
+  updateMissionHud(active);
+  updateHeaderStatus();
   updateSettingsSummary();
 }
 function newMission(){ missionPoints=[];currentMission=null;selecting=true;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI(); }
@@ -777,7 +900,18 @@ function setLanding(){
   map.getView().animate({center:[LANDING.lon,LANDING.lat],zoom:6,duration:450});
   showToast('Perseverance se marcó automáticamente como el punto BASE (P0).');
 }
-function resetMetrics(){ ['distance','duration','maxSlope','gain','avgSlope','segments','riskNumber','legsCount','dwellTotal','missionMargin','avgTransitability','minTransitabilityMetric','avgConfidence','minConfidenceMetric','scienceValueTotal'].forEach(id=>$(id).textContent='—'); $('routeName').textContent='Esperando misión';$('routeStatus').textContent='SIN RUTA';$('routeStatus').className='pill';$('riskLabel').textContent='Sin evaluación';$('riskBar').style.width='0%';if($('calcParams'))$('calcParams').textContent='—';if($('lastCalculated'))$('lastCalculated').textContent='Último cálculo: —';$('recalculate').disabled=true;$('saveMission').disabled=true;}
+function resetMetrics(){
+  ['distance','duration','maxSlope','gain','avgSlope','segments','riskNumber','legsCount','dwellTotal','missionMargin','avgTransitability','minTransitabilityMetric','avgConfidence','minConfidenceMetric','scienceValueTotal'].forEach(id=>{if($(id))$(id).textContent='—';});
+  if($('routeName'))$('routeName').textContent=ui('Esperando misión','Waiting for mission');
+  if($('routeStatus')){$('routeStatus').textContent=ui('SIN RUTA','NO ROUTE');$('routeStatus').className='pill';}
+  if($('riskLabel'))$('riskLabel').textContent=ui('Sin evaluación','Not evaluated');
+  if($('riskBar'))$('riskBar').style.width='0%';
+  if($('calcParams'))$('calcParams').textContent='—';
+  if($('lastCalculated'))$('lastCalculated').textContent=ui('Último cálculo: —','Last calculation: —');
+  if($('recalculate'))$('recalculate').disabled=true;
+  if($('saveMission'))$('saveMission').disabled=true;
+  renderTerrainProfile(null); renderMissionTimeline(null); updateMissionHud(null); updateHeaderStatus();
+}
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}
 function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2;$('recalculate').disabled=b||!currentMission;$('saveMission').disabled=b||!currentMission;if(msg)$('statusText').textContent=msg;else $('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}
 
@@ -841,6 +975,7 @@ function pdfStrategyPayload(m){
     sequence:(m.sequence||[]).map(pdfPointPayload).filter(Boolean),
     includedPoints:(m.includedPoints||m.sequence||[]).map(pdfPointPayload).filter(Boolean),
     omittedOptional:(m.omittedOptional||[]).map(pdfPointPayload).filter(Boolean),
+    scienceDecisions:(m.scienceDecisions||[]).map(x=>({...x})),
     requiredBaseline:m.requiredBaseline?{
       duration:Number(m.requiredBaseline.duration),
       dwellMinutes:Number(m.requiredBaseline.dwellMinutes)||0,
@@ -886,7 +1021,7 @@ async function exportMissionPdf(mode){
     },
     software:{
       name:'JEZERO',
-      version:'V31',
+      version:'V32',
       interfaceTheme:themeInfo().label,
       themeKey:themeInfo().key,
       reportLanguage:uiLang()
@@ -977,6 +1112,7 @@ function updateSettingsSummary(){
   if($('settingsHistorySummary')) $('settingsHistorySummary').textContent=`${hist.length} ${hist.length===1?ui('misión','mission'):ui('misiones','missions')}`;
   if($('settingsLanguageSummary')) $('settingsLanguageSummary').textContent=uiLang()==='en'?'English':'Español';
   if($('settingsThemeSummary')) $('settingsThemeSummary').textContent=themeInfo().label;
+  updateHeaderStatus();
   if($('defaultsStatus')) $('defaultsStatus').textContent=defs ? `${ui('Guardados','Saved')}: ${defs.speed} km/h · EVA ${defs.evaTime} h · ${ui('pendiente','slope')} ≤ ${defs.maxSlopeLimit}° · ${ui('transitabilidad','traversability')} ≥ ${defs.minTransitability} · ${ui('confianza','confidence')} ≥ ${defs.minConfidence}%` : ui('Usando valores de fábrica hasta que guardes un perfil.','Using factory values until you save a profile.');
 }
 function initializeSettings(){
@@ -1017,7 +1153,7 @@ function initializeSettings(){
 }
 function exportMissionJson(){
   const mode=document.querySelector('input[name="mode"]:checked')?.value||'balanced';
-  const payload={format:'JEZERO-MISSION',version:31,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints,returnBase:$('returnBase')?.checked!==false,mode,params:readOperationalDefaults()};
+  const payload={format:'JEZERO-MISSION',version:32,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints,returnBase:$('returnBase')?.checked!==false,mode,params:readOperationalDefaults()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
   const code=(payload.missionMeta.missionCode||'mision').replace(/[^a-z0-9_-]+/gi,'-'); a.href=url; a.download=`jezero-${code}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1200);
   showToast(ui('Misión exportada a JSON.','Mission exported to JSON.'));
@@ -1059,7 +1195,12 @@ function renderScienceEditor(){
   targets.forEach(({p,i})=>{
     const el=document.createElement('article'); el.className='scienceObjectiveCard';
     const category=p.scienceCategory||'geologia';
-    el.innerHTML=`<div class="scienceObjectiveHead"><div><small>OBJETIVO P${i}</small><b>${escapeHtml(p.name)}</b><span>${formatLat(p.lat)} · ${formatLon(p.lon)}</span></div><label class="scienceRequired"><input type="checkbox" data-science-required="${i}" ${p.required?'checked':''}> Obligatorio</label></div><div class="scienceObjectiveGrid"><label>Valor científico<input type="number" min="0" max="100" step="1" data-science-value="${i}" value="${clamp(Number(p.scienceValue??50),0,100)}"></label><label>Tiempo de trabajo<input type="number" min="0" max="1440" step="1" data-science-dwell="${i}" value="${Math.max(0,Number(p.dwellMin)||0)}"></label></div><label class="scienceCategoryField">Categoría<select data-science-category="${i}"><option value="geologia" ${category==='geologia'?'selected':''}>Geología</option><option value="muestra" ${category==='muestra'?'selected':''}>Muestreo</option><option value="imagen" ${category==='imagen'?'selected':''}>Imagen / documentación</option><option value="instrumento" ${category==='instrumento'?'selected':''}>Instrumento</option><option value="otro" ${category==='otro'?'selected':''}>Otro</option></select></label><label class="scienceNotesField">Notas<input data-science-notes="${i}" maxlength="180" value="${escapeHtml(p.scienceNotes||'')}" placeholder="Qué se busca observar o registrar"></label>`;
+    const active=selectedMission();
+    const decision=active?.scienceDecisions?.find(d=>d.pointIndex===i);
+    const cost=decision?.included
+      ? `${ui('INCLUIDO','INCLUDED')} · +${Number(decision.deltaDistanceKm||0).toFixed(2)} km · +${Math.round(Number(decision.deltaDurationHours||0)*60)} min`
+      : decision ? ui('OMITIDO POR RESTRICCIONES / UTILIDAD','OMITTED BY CONSTRAINTS / UTILITY') : ui('PENDIENTE DE CÁLCULO','PENDING CALCULATION');
+    el.innerHTML=`<div class="scienceObjectiveHead"><div><small>OBJETIVO P${i}</small><b>${escapeHtml(p.name)}</b><span>${formatLat(p.lat)} · ${formatLon(p.lon)}</span></div><label class="scienceRequired"><input type="checkbox" data-science-required="${i}" ${p.required?'checked':''}> Obligatorio</label></div><div class="scienceMissionCost ${decision?.included?'included':decision?'omitted':''}">${cost}</div><div class="scienceObjectiveGrid"><label>Valor científico<input type="number" min="0" max="100" step="1" data-science-value="${i}" value="${clamp(Number(p.scienceValue??50),0,100)}"></label><label>Tiempo de trabajo<input type="number" min="0" max="1440" step="1" data-science-dwell="${i}" value="${Math.max(0,Number(p.dwellMin)||0)}"></label></div><label class="scienceCategoryField">Categoría<select data-science-category="${i}"><option value="geologia" ${category==='geologia'?'selected':''}>Geología</option><option value="muestra" ${category==='muestra'?'selected':''}>Muestreo</option><option value="imagen" ${category==='imagen'?'selected':''}>Imagen / documentación</option><option value="instrumento" ${category==='instrumento'?'selected':''}>Instrumento</option><option value="otro" ${category==='otro'?'selected':''}>Otro</option></select></label><label class="scienceNotesField">Notas<input data-science-notes="${i}" maxlength="180" value="${escapeHtml(p.scienceNotes||'')}" placeholder="Qué se busca observar o registrar"></label>`;
     box.appendChild(el);
   });
   box.querySelectorAll('[data-science-value]').forEach(input=>input.onchange=()=>{const i=Number(input.dataset.scienceValue);missionPoints[i].scienceValue=clamp(Number(input.value)||0,0,100);invalidateScienceChange();});
