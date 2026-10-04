@@ -863,3 +863,151 @@ body.right-panel-hidden{--v39-safe-right:18px}
   .mapActions{justify-content:flex-end!important}
   .routeSequenceStrip{bottom:78px!important}
 }
+
+/* =========================================================
+   JEZERO V40 — DEPTH SYSTEM + CLEAN LOWER MAP ZONE
+   ========================================================= */
+:root{
+  --v40-elev-1:0 5px 12px rgba(0,0,0,.24),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 5%,transparent);
+  --v40-elev-2:0 10px 28px rgba(0,0,0,.34),0 2px 6px rgba(0,0,0,.26),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 7%,transparent);
+  --v40-elev-3:0 18px 46px rgba(0,0,0,.46),0 4px 12px rgba(0,0,0,.32),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 9%,transparent);
+  --v40-glass:color-mix(in srgb,var(--theme-panel) 88%,transparent);
+  --v40-bottom-clearance:94px;
+}
+
+/* La cartografía queda visualmente al fondo; la interfaz se lee en planos. */
+.mapPanel::before{
+  background:
+    radial-gradient(circle at 50% 42%,transparent 0 48%,rgba(0,0,0,.10) 74%,rgba(0,0,0,.28) 100%),
+    linear-gradient(90deg,rgba(0,0,0,.18),transparent 22%,transparent 78%,rgba(0,0,0,.20))!important;
+}
+.mapPanel::after{opacity:.7!important}
+
+/* Nivel 3: paneles principales. */
+.contextualPanel{
+  background:linear-gradient(165deg,color-mix(in srgb,var(--theme-panel-2) 94%,transparent),color-mix(in srgb,var(--theme-bg) 96%,transparent))!important;
+  border-color:color-mix(in srgb,var(--theme-line-strong) 82%,var(--theme-text) 7%)!important;
+  box-shadow:var(--v40-elev-3)!important;
+  backdrop-filter:blur(18px) saturate(1.08)!important;
+}
+.contextualPanel::after{
+  content:"";position:absolute;inset:1px;pointer-events:none;z-index:-1;
+  border:1px solid color-mix(in srgb,var(--theme-text) 3%,transparent);
+  clip-path:inherit;
+}
+
+/* Nivel 2: tarjetas internas. */
+.card,.moduleIntro,.missionCard,.terrainResultCard,.missionTimelinePanel,.coordinateInline,.landingPicker,.routeOrderNotice{
+  box-shadow:var(--v40-elev-1)!important;
+  background-image:linear-gradient(155deg,color-mix(in srgb,var(--theme-panel-2) 98%,var(--theme-text) 1.5%),color-mix(in srgb,var(--theme-panel) 96%,#000))!important;
+  border-color:color-mix(in srgb,var(--theme-line) 88%,var(--theme-text) 6%)!important;
+}
+.card:hover,.moduleIntro:hover,.missionCard:hover{
+  border-color:color-mix(in srgb,var(--theme-line-strong) 76%,var(--theme-accent-2) 14%)!important;
+}
+
+/* Nivel 2/3: controles flotantes del mapa. */
+.mapToolbar>div:first-child,.missionHud,.routeSequenceStrip,.mapLayerDrawer,.mapInfo{
+  background:linear-gradient(165deg,color-mix(in srgb,var(--theme-panel-2) 91%,transparent),color-mix(in srgb,var(--theme-bg) 91%,transparent))!important;
+  border-color:color-mix(in srgb,var(--theme-line-strong) 82%,var(--theme-text) 8%)!important;
+  box-shadow:var(--v40-elev-2)!important;
+  backdrop-filter:blur(18px) saturate(1.12)!important;
+}
+.mapToolbar>div:first-child,.missionHud,.routeSequenceStrip{
+  box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 8%,transparent)!important;
+}
+
+/* Botones: relieve suave, hover elevado y presión real. */
+.action,.primary,.coordinateInlineSubmit,.returnHomeAction,.moduleJump,.dataButton,
+.mapActions button,.moduleNav,.panelEdgeToggle,.mapLegendHeader button,.mapLayerDrawerHeader button{
+  box-shadow:0 5px 12px rgba(0,0,0,.24),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 8%,transparent)!important;
+  transition:transform .13s ease,box-shadow .13s ease,border-color .13s ease,background .13s ease,color .13s ease!important;
+}
+.action:hover,.primary:hover,.coordinateInlineSubmit:hover,.returnHomeAction:hover,.moduleJump:hover,.dataButton:hover,
+.mapActions button:hover,.moduleNav:hover,.panelEdgeToggle:hover,.mapLegendHeader button:hover,.mapLayerDrawerHeader button:hover{
+  transform:translateY(-2px)!important;
+  box-shadow:0 9px 18px rgba(0,0,0,.32),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 12%,transparent)!important;
+}
+.action:active,.primary:active,.coordinateInlineSubmit:active,.returnHomeAction:active,.moduleJump:active,.dataButton:active,
+.mapActions button:active,.moduleNav:active,.panelEdgeToggle:active,.mapLegendHeader button:active,.mapLayerDrawerHeader button:active{
+  transform:translateY(1px)!important;
+  box-shadow:0 2px 5px rgba(0,0,0,.30),inset 0 2px 5px rgba(0,0,0,.22)!important;
+}
+.moduleNav.is-active{
+  box-shadow:inset 0 3px 0 var(--theme-accent),inset 0 -1px 0 var(--theme-primary-2),0 7px 18px rgba(0,0,0,.26)!important;
+}
+
+/* Navegación inferior: más separada del mapa y con plano propio. */
+.moduleRail{
+  box-shadow:0 22px 58px rgba(0,0,0,.62),0 5px 14px rgba(0,0,0,.30),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 8%,transparent)!important;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--theme-panel-3) 98%,transparent),color-mix(in srgb,var(--theme-bg) 99%,transparent))!important;
+}
+
+/* ===== Franja inferior V40 =====
+   Un solo dock reemplaza tres overlays que antes se montaban entre sí. */
+.mapBottomDock{
+  position:absolute;z-index:15;
+  left:var(--v39-safe-left);right:var(--v39-safe-right);bottom:94px;
+  display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:8px;
+  min-width:0;pointer-events:none;
+}
+.mapBottomDock>div{
+  min-height:34px;display:flex;align-items:center;min-width:0;
+  border:1px solid color-mix(in srgb,var(--theme-line-strong) 82%,var(--theme-text) 7%);
+  background:linear-gradient(165deg,color-mix(in srgb,var(--theme-panel-2) 90%,transparent),color-mix(in srgb,var(--theme-bg) 88%,transparent));
+  box-shadow:0 9px 22px rgba(0,0,0,.34),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 7%,transparent);
+  backdrop-filter:blur(14px) saturate(1.08);
+  color:var(--theme-text);font:800 8px/1.25 "DM Mono",Consolas,monospace;
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+}
+.mapDockHint{padding:6px 10px;gap:8px;overflow:hidden}
+.mapDockHint #selectionHint{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--theme-soft)}
+.mapDockPulse{flex:0 0 auto;width:20px;height:20px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--theme-accent-2) 74%,var(--theme-line));color:var(--theme-accent-2);background:color-mix(in srgb,var(--theme-primary) 22%,transparent);font-size:11px;box-shadow:0 0 14px color-mix(in srgb,var(--theme-accent-2) 18%,transparent)}
+.mapDockCoords,.mapDockScale{padding:6px 10px;white-space:nowrap;color:var(--theme-text)}
+.mapDockCoords{color:var(--theme-accent-2)}
+.mapDockScale{color:var(--theme-muted)}
+
+/* La secuencia siempre va por encima del dock y nunca comparte su línea. */
+.routeSequenceStrip{bottom:138px!important;z-index:16!important}
+
+/* Elementos antiguos ya no deben reaparecer si el navegador conserva reglas previas. */
+.mapOverlay.topLeft,.mapOverlay.bottomLeft,.mapOverlay.bottomCenter,.scale{display:none!important}
+.mapBottomDock .mapDockScale{display:flex!important}
+
+/* Norte y popup respetan el nuevo plano inferior. */
+.north{box-shadow:0 8px 18px rgba(0,0,0,.36),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 8%,transparent)!important;z-index:15!important}
+
+/* Drawer de capas: profundidad interna, sin parecer una caja pegada. */
+.mapLayerDrawer{box-shadow:0 22px 56px rgba(0,0,0,.56),0 5px 14px rgba(0,0,0,.28),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 7%,transparent)!important}
+.mapQuickLayers label,.mapLayerDrawer .mapLegendInline{
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--theme-text) 5%,transparent),0 4px 9px rgba(0,0,0,.14)!important;
+}
+
+/* Analítica: tarjetas con jerarquía suficiente sin parecer dashboard plano. */
+.analyticsWorkspace{box-shadow:0 22px 60px rgba(0,0,0,.48)!important}
+.analyticsCard{box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 5%,transparent)!important}
+.analyticsCard:hover{border-color:color-mix(in srgb,var(--theme-line-strong) 70%,var(--theme-accent-2) 16%)!important}
+
+/* Toasts quedan sobre la navegación, no encima de ella. */
+.toast{bottom:98px!important;box-shadow:0 16px 38px rgba(0,0,0,.55)!important;backdrop-filter:blur(14px)!important}
+
+@media(max-width:1450px){
+  .mapBottomDock{grid-template-columns:minmax(140px,1fr) auto auto;bottom:94px}
+  .routeSequenceStrip{bottom:138px!important}
+}
+@media(max-width:1240px){
+  .mapBottomDock{left:var(--v39-safe-left);right:18px;grid-template-columns:minmax(120px,1fr) auto}
+  .mapDockScale{display:none!important}
+}
+@media(max-width:900px){
+  .mapBottomDock{left:12px;right:12px;bottom:82px;grid-template-columns:minmax(0,1fr) auto}
+  .mapDockHint #selectionHint{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .mapDockCoords{font-size:7px}
+  .routeSequenceStrip{bottom:128px!important}
+  .toast{bottom:84px!important}
+}
+@media(max-width:640px){
+  .mapBottomDock{grid-template-columns:1fr}
+  .mapDockCoords{display:none!important}
+  .routeSequenceStrip{bottom:126px!important}
+}

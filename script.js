@@ -9,6 +9,7 @@ const DEFAULTS_KEY = 'jezero-operational-defaults-v29';
 const PANEL_STATE_KEY = 'jezero-panel-state-v34';
 const MAP_VIEW_KEY = 'jezero-map-view-v34';
 const BASE_MAP_KEY = 'jezero-base-map-v34';
+const JEZERO_UI_VERSION = 'V40';
 
 let D;
 let map, markerLayer, routeLayer, analysisLayer, molaLayer, imageryLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
@@ -133,6 +134,7 @@ function pointStyle(kind,label,feature){
   const returnsHome=Boolean(feature?.get?.('returnsHome'));
   const styles=[];
   if(kind==='base'){
+    styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:18.5,angle:Math.PI/6,displacement:[1,-2],fill:new ol.style.Fill({color:'rgba(0,0,0,.34)'})})}));
     styles.push(new ol.style.Style({
       image:new ol.style.RegularShape({points:6,radius:17,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(success,'28')}),stroke:new ol.style.Stroke({color:hexAlpha(success,'75'),width:6})})
     }));
@@ -146,6 +148,7 @@ function pointStyle(kind,label,feature){
     return styles;
   }
   if(kind==='finish'){
+    styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:17.5,angle:Math.PI/6,displacement:[1,-2],fill:new ol.style.Fill({color:'rgba(0,0,0,.34)'})})}));
     styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:16,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(warning,'24')}),stroke:new ol.style.Stroke({color:hexAlpha(warning,'72'),width:5})})}));
     styles.push(new ol.style.Style({
       image:new ol.style.RegularShape({points:6,radius:12,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(bg,'ef')}),stroke:new ol.style.Stroke({color:warning,width:2.6})}),
@@ -155,6 +158,7 @@ function pointStyle(kind,label,feature){
     return styles;
   }
   if(kind==='target' || kind==='science'){
+    styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:17.5,angle:Math.PI/6,displacement:[1,-2],fill:new ol.style.Fill({color:'rgba(0,0,0,.32)'})})}));
     styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:16,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(accent,'22')}),stroke:new ol.style.Stroke({color:hexAlpha(accent,'70'),width:5})})}));
     styles.push(new ol.style.Style({
       image:new ol.style.RegularShape({points:6,radius:12,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(bg,'ed')}),stroke:new ol.style.Stroke({color:accent,width:2.7})}),
@@ -194,14 +198,21 @@ function routeArrowStyles(feature,color,c){
   const geometry=feature?.getGeometry?.();
   const coords=geometry?.getCoordinates?.();
   if(!Array.isArray(coords)||coords.length<2)return [];
-  const fractions=coords.length>10?[0.22,0.50,0.78]:[0.36,0.72];
-  return fractions.map(fr=>{
-    const sample=routeFractionPoint(coords,fr);if(!sample)return null;
-    return new ol.style.Style({
+  const fractions=coords.length>10?[0.24,0.50,0.76]:[0.38,0.70];
+  const styles=[];
+  fractions.forEach(fr=>{
+    const sample=routeFractionPoint(coords,fr);if(!sample)return;
+    // Sombra corta para separar la flecha del raster marciano.
+    styles.push(new ol.style.Style({
       geometry:new ol.geom.Point(sample.coord),
-      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,font:'900 15px Arial,sans-serif',fill:new ol.style.Fill({color:c.text||'#fff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:4}),padding:[1,1,1,1]})
-    });
-  }).filter(Boolean);
+      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,offsetX:1.2,offsetY:1.6,font:'900 14px Arial,sans-serif',fill:new ol.style.Fill({color:'rgba(0,0,0,.56)'}),stroke:new ol.style.Stroke({color:'rgba(0,0,0,.58)',width:5})})
+    }));
+    styles.push(new ol.style.Style({
+      geometry:new ol.geom.Point(sample.coord),
+      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,font:'900 14px Arial,sans-serif',fill:new ol.style.Fill({color:c.text||'#fff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:3.5}),padding:[1,1,1,1]})
+    }));
+  });
+  return styles;
 }
 function routeStyle(feature){
   const selected=feature?.get?.('selected'),kind=feature?.get?.('kind');
@@ -209,10 +220,11 @@ function routeStyle(feature){
   const color = selected ? c.accent : kind==='risk' ? c.success : kind==='distance' ? c.text : c.accent2;
   if(selected){
     const baseStyles=[
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'28'),width:19,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','c9'),width:10,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:'rgba(0,0,0,.36)',width:23,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'24'),width:19,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','df'),width:10.5,lineCap:'round',lineJoin:'round'})}),
       new ol.style.Style({stroke:new ol.style.Stroke({color,width:5.2,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','55'),width:1.1,lineDash:[2,10],lineCap:'round'})})
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','60'),width:1.15,lineDash:[2,10],lineCap:'round'})})
     ];
     return baseStyles.concat(routeArrowStyles(feature,color,c));
   }
