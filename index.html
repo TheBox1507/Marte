@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
   <link rel="shortcut icon" href="assets/favicon.ico?v=8">
-  <link rel="stylesheet" href="style.css?v=40">
-  <script src="modules/theme.js?v=40"></script>
+  <link rel="stylesheet" href="style.css?v=41">
+  <script src="modules/theme.js?v=41"></script>
 </head>
 <body data-module="planner">
 <header class="topbar">
@@ -341,13 +341,12 @@
       <div class="missionHudCell return"><span>RESERVA DE RETORNO</span><b id="hudReturn">—</b></div>
     </div>
     <div class="routeSequenceStrip is-empty" id="routeSequenceStrip" aria-label="Secuencia de marcha">
-      <span class="routeSequenceLabel">SECUENCIA</span>
-      <div class="routeSequenceFlow" id="routeSequenceFlow"><b>BASE</b><i>→</i><em>CALCULA UNA RUTA</em></div>
+      <div class="routeSequenceFlow" id="routeSequenceFlow"></div>
     </div>
 
     <section class="analyticsWorkspace" id="analyticsWorkspace" aria-label="Centro de análisis de la misión">
       <header class="analyticsHeader">
-        <div><span>JEZERO / MISSION ANALYTICS V40</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
+        <div><span>JEZERO / MISSION ANALYTICS V41</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
         <div class="analyticsHeaderMeta"><b id="analyticsRouteName">SIN MISIÓN</b><span id="analyticsGeneratedAt">CALCULA UNA RUTA</span></div>
       </header>
       <div class="analyticsToolbar">
@@ -393,11 +392,11 @@
     </section>
 
     <div id="map" aria-label="Mapa interactivo de Marte"></div>
-    <div class="mapBottomDock" id="mapBottomDock" aria-label="Estado rápido del mapa">
-      <div class="mapDockHint" title="Estado de edición de la misión"><span class="mapDockPulse">＋</span><span id="selectionHint">Activa una misión y selecciona los puntos directamente sobre el mapa</span></div>
-      <div class="mapDockCoords" id="coordReadout" title="Coordenadas del cursor">LAT 18.44463° · LON 77.45088°</div>
-      <div class="mapDockScale" id="scale" title="Anchura aproximada de la vista">VISTA ~0 km</div>
+    <div class="mapMissionHint" id="mapMissionHint" aria-live="polite" title="Modo de edición de misión">
+      <span class="mapMissionHintIcon">＋</span><span id="selectionHint"></span>
     </div>
+    <div class="mapCoordChip" id="coordReadout" title="Coordenadas del cursor">18.44463° N · 77.45088° E</div>
+    <div class="mapScaleChip" id="scale" title="Anchura aproximada de la vista">VISTA ~0 km</div>
 
     <div class="north">N</div>
 
@@ -489,8 +488,8 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="modules/i18n.js?v=40"></script>
-<script src="script.js?v=40"></script>
-<script src="modules/module-shell.js?v=40"></script>
+<script src="modules/i18n.js?v=41"></script>
+<script src="script.js?v=41"></script>
+<script src="modules/module-shell.js?v=41"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ const DEFAULTS_KEY = 'jezero-operational-defaults-v29';
 const PANEL_STATE_KEY = 'jezero-panel-state-v34';
 const MAP_VIEW_KEY = 'jezero-map-view-v34';
 const BASE_MAP_KEY = 'jezero-base-map-v34';
-const JEZERO_UI_VERSION = 'V40';
+const JEZERO_UI_VERSION = 'V41';
 
 let D;
 let map, markerLayer, routeLayer, analysisLayer, molaLayer, imageryLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
@@ -1252,7 +1252,7 @@ function renderMissionAnalytics(mission){
 function updateRouteSequenceStrip(mission){
   const strip=$('routeSequenceStrip'),flow=$('routeSequenceFlow');if(!strip||!flow)return;
   const seq=mission?.includedPoints||mission?.sequence||[];
-  if(!mission||seq.length<2){strip.classList.add('is-empty');flow.innerHTML=`<b>${ui('BASE','BASE')}</b><i>→</i><em>${ui('CALCULA UNA RUTA','CALCULATE A ROUTE')}</em>`;return;}
+  if(!mission||seq.length<2){strip.classList.add('is-empty');flow.innerHTML='';return;}
   strip.classList.remove('is-empty');
   let visit=0;
   const startKey=pointCoordKey(seq[0]);
@@ -1334,7 +1334,9 @@ function handleWaypointAction(action,i){
 }
 function updatePlanningUI(){
   $('pointCount').textContent=missionPoints.length;$('calculate').disabled=busy||missionPoints.length<2;$('saveMission').disabled=busy||!currentMission;
-  $('selectionHint').textContent=selecting?`Modo misión activo · toca el mapa para agregar el punto ${missionPoints.length+1}.`:(missionPoints.length?`${missionPoints.length} puntos planificados · JEZERO optimizará el orden al calcular.`:'Activa “Nueva misión” y toca el mapa para agregar puntos.');
+  const hint=$('selectionHint'),hintBox=$('mapMissionHint');
+  if(hint) hint.textContent=selecting?`Toca Marte para agregar el punto ${missionPoints.length+1}`:'';
+  if(hintBox) hintBox.classList.toggle('is-visible',Boolean(selecting));
   const active=currentMission?.[document.querySelector('input[name="mode"]:checked')?.value||'balanced']||null;
   renderMissionList();renderMissionTimeline(active);updateRouteSequenceStrip(active);updateMissionHud(active);updateHeaderStatus();updateSettingsSummary();
 }
