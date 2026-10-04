@@ -394,7 +394,7 @@ body{background:var(--theme-bg)!important;overflow:hidden!important;}
   box-shadow:0 12px 32px rgba(0,0,0,.34)!important;
 }
 .topbar::before{height:3px!important;background:linear-gradient(90deg,var(--theme-accent) 0 8%,var(--theme-primary-2) 8% 72%,var(--theme-accent-2) 72% 100%)!important;}
-.topbar::after{content:"JEZERO / EVA MISSION SYSTEM / V33"!important;bottom:4px!important;font-size:6px!important;letter-spacing:1.8px!important;}
+.topbar::after{content:"JEZERO / EVA MISSION SYSTEM / V39"!important;bottom:4px!important;font-size:6px!important;letter-spacing:1.8px!important;}
 .brand{gap:10px!important}.brandLogo{width:42px!important;height:42px!important;object-fit:contain}.brandText b{font-size:19px!important;letter-spacing:3px!important}.brandText small{font:800 7.5px/1.2 "DM Mono",Consolas,monospace!important;letter-spacing:1.5px!important}.brandText em{font:600 6px/1.2 "DM Mono",Consolas,monospace!important;letter-spacing:1px!important}
 .missionHeaderStrip{display:grid;grid-template-columns:repeat(5,minmax(72px,1fr));height:44px;border:1px solid var(--theme-line);background:color-mix(in srgb,var(--theme-panel) 92%,transparent);clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);overflow:hidden}
 .missionHeaderStrip>div{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:5px 10px;border-right:1px solid var(--theme-line)}.missionHeaderStrip>div:last-child{border-right:0}.missionHeaderStrip span{font:700 6.5px/1 "DM Mono",Consolas,monospace;letter-spacing:1.3px;color:var(--theme-soft)}.missionHeaderStrip b{margin-top:5px;font:800 10px/1.05 "DM Mono",Consolas,monospace;color:var(--theme-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.missionHeaderStrip>div:first-child b{color:var(--theme-accent-2)}
@@ -733,4 +733,133 @@ body[data-module="analysis"] .routeSequenceStrip{display:none!important}
 @media(max-width:760px){
   .routeSequenceStrip{left:10px;right:10px;transform:none;bottom:76px;max-width:none;width:auto;padding:5px 7px}
   .routeSequenceLabel{display:none}.routeSequenceFlow{gap:4px}.routeSequenceFlow b{font-size:7px;padding:4px 6px}.routeSequenceFlow i{font-size:9px}
+}
+
+/* =========================================================
+   JEZERO V39 — SAFE MAP LAYOUT + INTEGRATED LEGEND
+   ========================================================= */
+body{
+  --v39-safe-left:calc(var(--v32-panel-w) + 34px);
+  --v39-safe-right:calc(var(--v32-detail-w) + 34px);
+  --v39-safe-gap:14px;
+}
+body.left-panel-hidden{--v39-safe-left:18px}
+body.right-panel-hidden{--v39-safe-right:18px}
+
+/* Todos los overlays del mapa comparten la misma zona segura. */
+.mapToolbar{
+  left:var(--v39-safe-left)!important;
+  right:var(--v39-safe-right)!important;
+  display:grid!important;
+  grid-template-columns:minmax(150px,1fr) auto!important;
+  gap:var(--v39-safe-gap)!important;
+  min-width:0!important;
+}
+.mapToolbar>div:first-child{
+  min-width:0!important;
+  max-width:340px!important;
+  overflow:hidden!important;
+}
+.mapToolbar>div:first-child strong,
+.mapToolbar>div:first-child small{
+  max-width:100%!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+.mapToolsRight{min-width:0!important;max-width:100%!important}
+.mapActions{max-width:100%!important;justify-content:flex-end!important}
+
+.missionHud{
+  left:var(--v39-safe-left)!important;
+  right:var(--v39-safe-right)!important;
+  transform:none!important;
+  margin-inline:auto!important;
+  width:auto!important;
+  max-width:720px!important;
+  min-width:0!important;
+}
+.missionHud.is-compact{
+  left:var(--v39-safe-left)!important;
+  right:var(--v39-safe-right)!important;
+  width:auto!important;
+  max-width:720px!important;
+}
+.missionHudCell b{white-space:normal!important;overflow-wrap:anywhere!important;text-overflow:clip!important}
+
+.routeSequenceStrip{
+  left:var(--v39-safe-left)!important;
+  right:var(--v39-safe-right)!important;
+  transform:none!important;
+  margin-inline:auto!important;
+  width:auto!important;
+  max-width:760px!important;
+  min-width:0!important;
+}
+.routeSequenceFlow{min-width:0!important;max-width:100%!important}
+
+.topLeft,.bottomLeft{left:var(--v39-safe-left)!important;max-width:min(430px,calc(100vw - var(--v39-safe-left) - var(--v39-safe-right)))!important}
+.north{right:var(--v39-safe-right)!important}
+.scale{right:var(--v39-safe-right)!important}
+.mapInfo{right:var(--v39-safe-right)!important;max-width:min(360px,calc(100vw - var(--v39-safe-left) - var(--v39-safe-right)))!important}
+
+/* La leyenda deja de flotar sobre Marte: ahora vive dentro de CAPAS. */
+.mapLayerDrawer .mapLegendInline{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  max-width:none!important;
+  margin-top:12px!important;
+  border:1px solid var(--theme-line)!important;
+  clip-path:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  background:var(--theme-panel-2)!important;
+  overflow:hidden!important;
+}
+.mapLayerDrawer .mapLegendHeader{
+  min-height:46px!important;
+  padding:9px 10px!important;
+  background:color-mix(in srgb,var(--theme-primary) 16%,var(--theme-panel-2))!important;
+  border-bottom:0!important;
+}
+.mapLayerDrawer .mapLegendHeader strong{font-size:9.5px!important;color:var(--theme-accent-2)!important}
+.mapLayerDrawer .mapLegendHeader small{font-size:8.5px!important;line-height:1.35!important;color:var(--theme-muted)!important}
+.mapLayerDrawer .mapLegendHeader button{min-width:30px!important;min-height:30px!important}
+.mapLayerDrawer .mapLegendBody{max-height:none!important;padding:8px 10px 10px!important;overflow:visible!important;border-top:1px solid var(--theme-line)!important}
+.mapLayerDrawer .legendItem{grid-template-columns:30px minmax(0,1fr)!important;min-height:38px!important;gap:8px!important;padding:4px 0!important}
+.mapLayerDrawer .legendItem b{font-size:10px!important}
+.mapLayerDrawer .legendItem small{font-size:8.5px!important;line-height:1.35!important}
+.mapLayerDrawer .mapLegendGroupTitle{font-size:7px!important;margin:10px 0 5px!important}
+
+/* Paneles laterales: el texto nunca debe escapar de su propia tarjeta. */
+.contextualPanel,.contextualPanel *{box-sizing:border-box}
+.contextualPanel .modulePanel,.contextualPanel section,.contextualPanel .card,.contextualPanel .moduleIntro,.contextualPanel .reference,.contextualPanel .routeHeader,.contextualPanel .metricGrid>div{min-width:0!important}
+.contextualPanel p,.contextualPanel small,.contextualPanel span,.contextualPanel b,.contextualPanel strong,.contextualPanel label{overflow-wrap:anywhere}
+.contextualPanel .sectionTitle{white-space:normal!important;line-height:1.25!important}
+.contextualPanel .metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.contextualPanel .metricGrid strong{white-space:normal!important;overflow-wrap:anywhere!important}
+
+/* Cuando el corredor libre es estrecho, prioriza controles y reduce texto auxiliar. */
+@media(max-width:1450px){
+  .mapToolbar>div:first-child{max-width:270px!important}
+  .mapToolbar>div:first-child small{display:none!important}
+  .missionHud.is-compact{max-width:620px!important}
+  .routeSequenceStrip{max-width:650px!important}
+}
+@media(max-width:1240px){
+  body{--v39-safe-right:18px}
+  .details{display:none!important}
+  .panelEdgeToggleRight{display:none!important}
+  .mapToolbar{grid-template-columns:minmax(120px,1fr) auto!important}
+  .mapActions button{min-width:40px!important;padding:8px 9px!important}
+  .missionHud.is-compact{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:900px){
+  body{--v39-safe-left:18px;--v39-safe-right:18px}
+  .sidebar{transform:translateX(calc(-100% - 34px))!important;opacity:0!important;pointer-events:none!important}
+  .panelEdgeToggleLeft{left:6px!important}
+  .mapToolbar>div:first-child{display:none!important}
+  .mapToolbar{grid-template-columns:1fr!important}
+  .mapActions{justify-content:flex-end!important}
+  .routeSequenceStrip{bottom:78px!important}
 }

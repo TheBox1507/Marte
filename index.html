@@ -285,7 +285,7 @@
           <button id="zoomIn" title="Acercar">＋</button>
           <button id="zoomOut" title="Alejar">−</button>
           <button id="center">⌖ Centro</button>
-          <button id="toggleLayerDrawer" class="mapToolWide" type="button" aria-expanded="false" aria-controls="mapLayerDrawer">▦ Capas</button>
+          <button id="toggleLayerDrawer" class="mapToolWide" type="button" aria-expanded="false" aria-controls="mapLayerDrawer">▦ Capas / leyenda</button>
           <button id="focusMap" class="mapToolWide" type="button" title="Ocultar o mostrar ambos paneles">⤢ Mapa</button>
         </div>
         <div class="mapLayerDrawer" id="mapLayerDrawer" aria-hidden="true">
@@ -314,6 +314,22 @@
             <label><input type="checkbox" data-quick-layer="landing" checked><span><b>Aterrizajes</b><small>NASA + Zhurong y referencias históricas</small></span></label>
           </div>
           <div class="mapLayerSourceNote"><b>FUENTES</b><span>Viking VIS / MOLA: NASA Mars Trek · Nombres: USGS Gazetteer / IAU</span></div>
+          <div class="mapLegend mapLegendInline is-collapsed" id="mapLegend" aria-label="Leyenda del mapa">
+            <div class="mapLegendHeader"><div><strong>SIMBOLOGÍA</strong><small>Base, puntos, referencias y sentido de marcha</small></div><button id="toggleMapLegend" type="button" aria-expanded="false" aria-controls="mapLegendBody">＋</button></div>
+            <div class="mapLegendBody" id="mapLegendBody">
+              <div class="mapLegendGroupTitle">REFERENCIAS</div>
+              <div class="legendItem"><span class="legendSymbol landing"></span><span><b>Sitio de aterrizaje</b><small>Misiones que aterrizaron en Marte</small></span></div>
+              <div class="legendItem"><span class="legendSymbol known"></span><span><b>Nomenclatura marciana</b><small>Nombres oficiales IAU / USGS visibles según zoom</small></span></div>
+              <div class="mapLegendGroupTitle">MISIÓN</div>
+              <div class="legendItem"><span class="legendMissionIcon baseStation">⌂</span><span><b>BASE / HOME</b><small>Inicio y retorno de la caminata</small></span></div>
+              <div class="legendItem"><span class="legendMissionIcon missionNode">01</span><span><b>Punto de misión</b><small>Orden optimizado de visita</small></span></div>
+              <div class="legendItem"><span class="legendMissionIcon finishNode">F</span><span><b>FIN</b><small>Último punto cuando no se regresa a base</small></span></div>
+              <div class="mapLegendGroupTitle">RUTA</div>
+              <div class="legendItem"><span class="legendCorridor"></span><span><b>Corredor EVA</b><small>Zona visual de navegación</small></span></div>
+              <div class="legendItem"><span class="legendRouteArrow">➤</span><span><b>Sentido de marcha</b><small>Las flechas indican la dirección del recorrido</small></span></div>
+              <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta activa</b><small>Recorrido actualmente analizado</small></span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -331,7 +347,7 @@
 
     <section class="analyticsWorkspace" id="analyticsWorkspace" aria-label="Centro de análisis de la misión">
       <header class="analyticsHeader">
-        <div><span>JEZERO / MISSION ANALYTICS V38</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
+        <div><span>JEZERO / MISSION ANALYTICS V39</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
         <div class="analyticsHeaderMeta"><b id="analyticsRouteName">SIN MISIÓN</b><span id="analyticsGeneratedAt">CALCULA UNA RUTA</span></div>
       </header>
       <div class="analyticsToolbar">
@@ -381,25 +397,6 @@
     <div class="mapOverlay bottomLeft" id="coordReadout">LAT 18.44463° · LON 77.45088°</div>
     <div class="mapOverlay bottomCenter">NASA MARS TREK · VIKING VIS / MOLA / HRSC · USGS / IAU · MDEM200M</div>
 
-    <div class="mapLegend is-collapsed" id="mapLegend" aria-label="Leyenda del mapa">
-      <div class="mapLegendHeader"><div><strong>LEYENDA</strong><small>Simbología del mapa</small></div><button id="toggleMapLegend" type="button" aria-expanded="false" aria-controls="mapLegendBody">＋</button></div>
-      <div class="mapLegendBody" id="mapLegendBody">
-        <div class="mapLegendGroupTitle">REFERENCIAS</div>
-        <div class="legendItem"><span class="legendSymbol landing"></span><span><b>Sitio de aterrizaje</b><small>Misiones que aterrizaron en Marte</small></span></div>
-        <div class="legendItem"><span class="legendSymbol known"></span><span><b>Nomenclatura marciana</b><small>Nombres oficiales IAU / USGS visibles según zoom</small></span></div>
-        <div class="mapLegendGroupTitle">MISIÓN</div>
-        <div class="legendItem"><span class="legendMissionIcon baseStation">⌂</span><span><b>BASE / HOME</b><small>Inicio y retorno de la caminata</small></span></div>
-        <div class="legendItem"><span class="legendMissionIcon missionNode">01</span><span><b>Punto de misión</b><small>El número indica el orden optimizado de visita</small></span></div>
-        <div class="legendItem"><span class="legendMissionIcon finishNode">F</span><span><b>Fin</b><small>Último punto cuando no se regresa a base</small></span></div>
-        <div class="mapLegendGroupTitle">RUTAS</div>
-        <div class="legendItem"><span class="legendCorridor"></span><span><b>Corredor EVA</b><small>Zona visual de navegación</small></span></div>
-        <div class="legendItem"><span class="legendRouteArrow">➤</span><span><b>Sentido de marcha</b><small>Las flechas siguen la dirección real del recorrido</small></span></div>
-        <div class="legendItem"><span class="legendLine selected"></span><span><b>Ruta seleccionada</b><small>Alternativa analizada</small></span></div>
-        <div class="legendItem"><span class="legendLine direct"></span><span><b>Más directa</b><small>Prioriza distancia</small></span></div>
-        <div class="legendItem"><span class="legendLine balanced"></span><span><b>Equilibrada</b><small>Distancia + terreno</small></span></div>
-        <div class="legendItem"><span class="legendLine risk"></span><span><b>Menor exposición</b><small>Penaliza dificultad</small></span></div>
-      </div>
-    </div>
     <div class="north">N</div>
     <div class="scale" id="scale">0 km</div>
 
