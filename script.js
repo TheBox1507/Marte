@@ -9,7 +9,7 @@ const DEFAULTS_KEY = 'jezero-operational-defaults-v29';
 const PANEL_STATE_KEY = 'jezero-panel-state-v34';
 const MAP_VIEW_KEY = 'jezero-map-view-v34';
 const BASE_MAP_KEY = 'jezero-base-map-v34';
-const JEZERO_UI_VERSION = 'V42';
+const JEZERO_UI_VERSION = 'V43';
 
 let D;
 let map, markerLayer, routeLayer, analysisLayer, molaLayer, imageryLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
@@ -25,6 +25,12 @@ let lastNomenclatureKey = '';
 let nomenclatureRequestSeq = 0;
 let derivedRefreshToken = 0;
 let lastDerivedExtentKey = '';
+const ROUTE_ANIMATION_KEY = 'jezero-route-animation-v43';
+let routeFlowPhase = 0;
+let routeAnimationFrame = 0;
+let routeAnimationLastPaint = 0;
+const reducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)') || {matches:false,addEventListener(){}};
+let routeAnimationEnabled = localStorage.getItem(ROUTE_ANIMATION_KEY) !== 'off' && !reducedMotionQuery.matches;
 
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
@@ -121,6 +127,7 @@ function initMap(){
   updateMapScale();
   drawPointMarkers();
   populateReferenceLayers();
+  startRouteAnimationLoop();
 }
 function hexAlpha(hex,alpha='33'){
   const value=String(hex||'').trim();
@@ -194,44 +201,91 @@ function routeFractionPoint(coords,fraction){
   const a=coords[coords.length-2],b=coords[coords.length-1];
   return {coord:b.slice(),angle:Math.atan2(b[1]-a[1],b[0]-a[0])};
 }
-function routeArrowStyles(feature,color,c){
+function routeFlowStyles(feature,color,c){
+  if(!routeAnimationEnabled || reducedMotionQuery.matches) return [];
   const geometry=feature?.getGeometry?.();
   const coords=geometry?.getCoordinates?.();
   if(!Array.isArray(coords)||coords.length<2)return [];
-  const fractions=coords.length>12?[0.20,0.40,0.60,0.80]:coords.length>7?[0.27,0.54,0.79]:[0.38,0.72];
   const styles=[];
-  fractions.forEach(fr=>{
-    const sample=routeFractionPoint(coords,fr);if(!sample)return;
+  const spacing=0.27;
+  for(let i=0;i<3;i++){
+    const fraction=(routeFlowPhase + i*spacing)%1;
+    if(fraction<0.06 || fraction>0.94) continue;
+    const sample=routeFractionPoint(coords,fraction); if(!sample) continue;
     const rotation=Math.PI/2-sample.angle;
     styles.push(new ol.style.Style({
       geometry:new ol.geom.Point(sample.coord),
-      image:new ol.style.RegularShape({points:3,radius:8.7,angle:0,rotation,rotateWithView:true,displacement:[1,-1],fill:new ol.style.Fill({color:'rgba(0,0,0,.58)'}),stroke:new ol.style.Stroke({color:'rgba(0,0,0,.58)',width:3})})
+      image:new ol.style.RegularShape({
+        points:3,
+        radius:4.8,
+        angle:0,
+        rotation,
+        rotateWithView:true,
+        fill:new ol.style.Fill({color:'rgba(0,0,0,.58)'}),
+        stroke:new ol.style.Stroke({color:'rgba(0,0,0,.45)',width:1.6})
+      })
     }));
     styles.push(new ol.style.Style({
       geometry:new ol.geom.Point(sample.coord),
-      image:new ol.style.RegularShape({points:3,radius:7.1,angle:0,rotation,rotateWithView:true,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:c.text||'#fff',width:1.3})})
+      image:new ol.style.RegularShape({
+        points:3,
+        radius:3.7,
+        angle:0,
+        rotation,
+        rotateWithView:true,
+        fill:new ol.style.Fill({color}),
+        stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','b8'),width:.8})
+      })
     }));
-  });
+  }
   return styles;
 }
 function routeStyle(feature){
   const selected=feature?.get?.('selected'),kind=feature?.get?.('kind');
   const c=themeColors();
-  const color = kind==='risk' ? (c.success||'#54e0a6') : kind==='distance' ? (c.text||'#fff') : (c.accent||'#8a5cff');
+  const color = kind==='risk' ? (c.success||'#54e0a6') : kind==='distance' ? (c.accent2||'#55b7ff') : (c.accent||'#8a5cff');
   if(selected){
-    const strategyGlow=kind==='risk'?hexAlpha(c.success||'#54e0a6','2d'):kind==='distance'?hexAlpha(c.text||'#fff','20'):hexAlpha(c.accent2||c.primary2,'2b');
-    const centerDash=kind==='distance'?[2,9]:kind==='risk'?[7,6]:[1,8];
+    const corridor=kind==='risk'?hexAlpha(c.success||'#54e0a6','24'):kind==='distance'?hexAlpha(c.accent2||'#55b7ff','20'):hexAlpha(c.accent||'#8a5cff','22');
     const baseStyles=[
-      new ol.style.Style({stroke:new ol.style.Stroke({color:'rgba(0,0,0,.48)',width:22,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:strategyGlow,width:17,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','e8'),width:10,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color,width:5.1,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:kind==='distance'?hexAlpha(c.accent2||'#55b7ff','c8'):hexAlpha(c.text||'#fff','72'),width:1.25,lineDash:centerDash,lineCap:'round'})})
+      new ol.style.Style({stroke:new ol.style.Stroke({color:'rgba(0,0,0,.58)',width:8,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:corridor,width:6,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color,width:3.1,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','55'),width:.75,lineCap:'round',lineJoin:'round'})})
     ];
-    return baseStyles.concat(routeArrowStyles(feature,color,c));
+    return baseStyles.concat(routeFlowStyles(feature,color,c));
   }
-  const dash=kind==='risk'?[3,8]:kind==='distance'?[10,7]:[7,7];
-  return new ol.style.Style({ stroke:new ol.style.Stroke({color:hexAlpha(color,'a8'), width:2.2, lineDash:dash}) });
+  const dash=kind==='risk'?[3,8]:kind==='distance'?[9,7]:[6,7];
+  return new ol.style.Style({ stroke:new ol.style.Stroke({color:hexAlpha(color,'8f'), width:1.7, lineDash:dash,lineCap:'round',lineJoin:'round'}) });
+}
+
+function setRouteAnimationEnabled(value,{persist=true,notify=true}={}){
+  const requested=Boolean(value);
+  routeAnimationEnabled=requested && !reducedMotionQuery.matches;
+  if(persist) localStorage.setItem(ROUTE_ANIMATION_KEY, requested ? 'on' : 'off');
+  const toggle=$('routeAnimationSetting');
+  if(toggle) toggle.checked=requested && !reducedMotionQuery.matches;
+  routeLayer?.changed?.();
+  map?.render?.();
+  if(notify){
+    showToast(routeAnimationEnabled
+      ? ui('Flujo animado de ruta activado.','Animated route flow enabled.')
+      : ui('Animación de ruta desactivada.','Route animation disabled.'));
+  }
+}
+function routeAnimationTick(now){
+  routeAnimationFrame=requestAnimationFrame(routeAnimationTick);
+  if(!routeAnimationEnabled || reducedMotionQuery.matches || document.hidden || !routeLayer?.getVisible?.()) return;
+  const hasRoute=(routeLayer?.getSource?.()?.getFeatures?.()?.length||0)>0;
+  if(!hasRoute) return;
+  if(now-routeAnimationLastPaint<70) return; // ~14 fps: fluido y ligero
+  routeAnimationLastPaint=now;
+  routeFlowPhase=(now%3600)/3600;
+  routeLayer.changed();
+  map?.render?.();
+}
+function startRouteAnimationLoop(){
+  if(routeAnimationFrame) return;
+  routeAnimationFrame=requestAnimationFrame(routeAnimationTick);
 }
 
 function analysisHighlightStyle(feature){
@@ -1592,6 +1646,28 @@ function initializeSettings(){
     $('languageSetting').value=uiLang();
     $('languageSetting').addEventListener('change',()=>window.JEZERO_I18N?.setLanguage?.($('languageSetting').value));
   }
+  if($('routeAnimationSetting')){
+    $('routeAnimationSetting').checked=routeAnimationEnabled;
+    if(reducedMotionQuery.matches){
+      $('routeAnimationSetting').checked=false;
+      $('routeAnimationSetting').disabled=true;
+      $('routeAnimationSetting').closest('.motionSetting')?.classList.add('is-disabled');
+    }
+    $('routeAnimationSetting').addEventListener('change',()=>setRouteAnimationEnabled($('routeAnimationSetting').checked));
+  }
+  reducedMotionQuery.addEventListener?.('change',ev=>{
+    if(ev.matches){
+      routeAnimationEnabled=false;
+      if($('routeAnimationSetting')){$('routeAnimationSetting').checked=false;$('routeAnimationSetting').disabled=true;}
+      $('routeAnimationSetting')?.closest('.motionSetting')?.classList.add('is-disabled');
+    }else{
+      if($('routeAnimationSetting')) $('routeAnimationSetting').disabled=false;
+      $('routeAnimationSetting')?.closest('.motionSetting')?.classList.remove('is-disabled');
+      routeAnimationEnabled=localStorage.getItem(ROUTE_ANIMATION_KEY)!=='off';
+      if($('routeAnimationSetting')) $('routeAnimationSetting').checked=routeAnimationEnabled;
+    }
+    routeLayer?.changed?.(); map?.render?.();
+  });
   window.addEventListener('jezero:languagechange',ev=>{
     if($('languageSetting')) $('languageSetting').value=ev.detail?.language||uiLang();
     updateSettingsSummary();
@@ -1619,7 +1695,7 @@ function initializeSettings(){
 }
 function exportMissionJson(){
   const mode=document.querySelector('input[name="mode"]:checked')?.value||'balanced';
-  const payload={format:'JEZERO-MISSION',version:38,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type==='base'?'base':'target',dwellMin:Number(p.dwellMin)||0})),returnBase:$('returnBase')?.checked!==false,optimizeOrder:$('optimizeOrder')?.checked!==false,mode,params:readOperationalDefaults()};
+  const payload={format:'JEZERO-MISSION',version:43,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key,routeAnimation:routeAnimationEnabled},points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type==='base'?'base':'target',dwellMin:Number(p.dwellMin)||0})),returnBase:$('returnBase')?.checked!==false,optimizeOrder:$('optimizeOrder')?.checked!==false,mode,params:readOperationalDefaults()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
   const code=(payload.missionMeta.missionCode||'mision').replace(/[^a-z0-9_-]+/gi,'-'); a.href=url; a.download=`jezero-${code}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1200);
   showToast(ui('Misión exportada a JSON.','Mission exported to JSON.'));
@@ -1634,6 +1710,7 @@ async function importMissionJsonFile(ev){
     })).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
     if(data.missionMeta) setMissionSettings(data.missionMeta);
     if(data.interface?.theme) window.JEZERO_THEMES?.setTheme?.(data.interface.theme);
+    if(typeof data.interface?.routeAnimation==='boolean') setRouteAnimationEnabled(data.interface.routeAnimation,{notify:false});
     if(data.interface?.language) window.JEZERO_I18N?.setLanguage?.(data.interface.language);
     if(data.params) applyDefaults(data.params,{notify:false});
     if($('returnBase')) $('returnBase').checked=data.returnBase!==false; if($('optimizeOrder')) $('optimizeOrder').checked=data.optimizeOrder!==false;

@@ -4,6 +4,7 @@
   const VALID = new Set(['es','en']);
 
   const ES_EN = {
+    'Flujo animado de la ruta':'Animated route flow','Muestra pequeños indicadores moviéndose en el sentido real de la caminata. No afecta el cálculo.':'Shows small indicators moving in the actual travel direction. It does not affect calculations.','Animación de ruta desactivada.':'Route animation disabled.','Flujo animado de ruta activado.':'Animated route flow enabled.',
     'EVA MISSION SYSTEM':'EVA MISSION SYSTEM',
     'TERRAIN · ROUTING · NAVIGATION':'TERRAIN · ROUTING · NAVIGATION',
     'Define la base, agrega puntos de misión y deja que JEZERO optimice automáticamente el orden de visita sobre el terreno marciano.':'Define the base, add mission points, and let JEZERO automatically optimize the visit order across Martian terrain.',

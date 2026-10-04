@@ -1,5 +1,5 @@
-# JEZERO V42 — EVA Mission System
+# JEZERO V43
 
-Actualización centrada en claridad operacional y diferenciación real de estrategias de ruta.
+Actualización visual del recorrido EVA.
 
-La lógica de elevación, límites duros, optimización de puntos, resultados interactivos y generación PDF se conserva. V42 modifica la función de costo de las estrategias, su corredor de búsqueda y su representación visual.
+La ruta deja de parecer una carretera o tubería y pasa a un lenguaje cartográfico más limpio: línea técnica fina, corredor muy sutil y pequeños indicadores animados que muestran el sentido de la caminata.
