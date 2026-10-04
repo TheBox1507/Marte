@@ -42,7 +42,7 @@
     'PERFIL DEL TERRENO':'TERRAIN PROFILE','Calcula una misión para generar el perfil.':'Calculate a mission to generate the profile.',
     'Guardar misión y generar PDF completo':'Save mission and generate complete PDF',
     'PLAN':'PLAN','RETURN RESERVE':'RETURN RESERVE','RUTA ACTIVA':'ACTIVE ROUTE','SIN RUTA':'NO ROUTE',
-    'Corredor EVA':'EVA corridor','Zona visual de navegación':'Visual navigation zone',
+    'Corredor EVA':'EVA corridor','Zona visual de navegación':'Visual navigation zone','BASE / HOME':'BASE / HOME','Inicio y retorno de la caminata':'Traverse start and return','El número indica el orden optimizado de visita':'The number indicates the optimized visit order','Fin':'Finish','Último punto cuando no se regresa a base':'Last point when the route does not return to base','Sentido de marcha':'Travel direction','Las flechas siguen la dirección real del recorrido':'Arrows follow the actual direction of travel','SECUENCIA':'SEQUENCE','CALCULA UNA RUTA':'CALCULATE A ROUTE',
     'TERRENO / CORREDOR EVA':'TERRAIN / EVA CORRIDOR','PEND. MEDIA':'AVG. SLOPE','TRANSIT. MEDIA':'AVG. TRAVERSABILITY','TRANSIT. MÍN.':'MIN. TRAVERSABILITY','CONF. MÍN.':'MIN. CONFIDENCE',
     'PENDIENTE MÁX.':'MAX. SLOPE','DESNIVEL':'ELEVATION CHANGE','RETORNO':'RETURN',
     'INCLUIDO':'INCLUDED','OMITIDO POR RESTRICCIONES / UTILIDAD':'OMITTED BY CONSTRAINTS / UTILITY','PENDIENTE DE CÁLCULO':'PENDING CALCULATION',

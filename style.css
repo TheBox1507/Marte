@@ -697,3 +697,40 @@ body[data-module="analysis"] .scale{opacity:0!important;pointer-events:none!impo
 .analyticsChart svg[data-sync-chart]{cursor:crosshair}.analyticsSyncCursor{pointer-events:none}.analyticsCard:has(#analyticsMiniMap) .analyticsChart{min-height:180px}
 @media(max-width:1100px){.analyticsToolbar{grid-template-columns:1fr auto}.analyticsSelectionReadout{grid-column:1/-1;text-align:left}.v36BarRow{grid-template-columns:86px minmax(90px,1fr) 42px 58px}}
 @media(max-width:760px){.analyticsToolbar{grid-template-columns:1fr}.analyticsToolbar label{justify-content:space-between}.analyticsToolbar button{width:100%}.analyticsSelectionReadout{white-space:normal}.v36BarRow{grid-template-columns:78px minmax(70px,1fr) 38px}.v36BarRow>em{display:none}.v36RouteCompare{grid-template-columns:100px repeat(3,minmax(105px,1fr))}.waypoint{grid-template-columns:32px minmax(0,1fr) 36px}.dwellEdit{display:flex;margin-top:4px}}
+
+/* =========================================================
+   JEZERO V38 — DIRECTIONAL ROUTE + MISSION SYMBOLOGY
+   ========================================================= */
+.routeSequenceStrip{
+  position:absolute;z-index:13;left:50%;bottom:88px;transform:translateX(-50%);
+  width:max-content;max-width:min(860px,72vw);display:flex;align-items:center;gap:10px;
+  padding:7px 10px 7px 8px;border:1px solid var(--theme-line-strong);
+  background:color-mix(in srgb,var(--theme-panel) 88%,transparent);
+  box-shadow:0 10px 26px rgba(0,0,0,.28);backdrop-filter:blur(10px);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  pointer-events:auto;transition:opacity .16s ease,transform .16s ease;
+}
+.routeSequenceStrip.is-empty{opacity:.64}
+.routeSequenceLabel{flex:0 0 auto;font:800 6.5px/1 "DM Mono",Consolas,monospace;letter-spacing:1.4px;color:var(--theme-soft);padding:5px 7px;border-right:1px solid var(--theme-line)}
+.routeSequenceFlow{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--theme-line-strong) transparent;padding:1px 0 2px}
+.routeSequenceFlow b,.routeSequenceFlow em{flex:0 0 auto;font:900 8px/1 "DM Mono",Consolas,monospace;font-style:normal;letter-spacing:.6px}
+.routeSequenceFlow b{min-width:28px;text-align:center;padding:5px 7px;border:1px solid var(--theme-line-strong);background:var(--theme-panel-2);color:var(--theme-text);clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)}
+.routeSequenceFlow b.base,.routeSequenceFlow b.home{border-color:var(--theme-success);color:var(--theme-success);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-success) 20%,transparent)}
+.routeSequenceFlow b.point{border-color:var(--theme-accent);color:var(--theme-text)}
+.routeSequenceFlow i{flex:0 0 auto;color:var(--theme-accent-2);font:900 11px/1 Arial,sans-serif;font-style:normal}
+.routeSequenceFlow em{color:var(--theme-muted);padding-right:5px}
+body[data-module="analysis"] .routeSequenceStrip{display:none!important}
+
+.legendMissionIcon{width:24px;height:24px;display:grid;place-items:center;justify-self:center;background:var(--theme-panel-2);color:var(--theme-text);font:900 8px/1 "DM Mono",Consolas,monospace;position:relative}
+.legendMissionIcon.baseStation{clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);border:0;box-shadow:inset 0 0 0 2px var(--theme-success);color:var(--theme-success)}
+.legendMissionIcon.missionNode{clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);box-shadow:inset 0 0 0 2px var(--theme-accent)}
+.legendMissionIcon.finishNode{clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);box-shadow:inset 0 0 0 2px var(--theme-warning);color:var(--theme-warning)}
+.legendRouteArrow{width:28px;display:grid;place-items:center;justify-self:center;color:var(--theme-text);font:900 18px/1 Arial,sans-serif;text-shadow:0 0 5px var(--theme-bg)}
+
+@media(max-width:1180px){
+  .routeSequenceStrip{max-width:66vw;bottom:92px}
+}
+@media(max-width:760px){
+  .routeSequenceStrip{left:10px;right:10px;transform:none;bottom:76px;max-width:none;width:auto;padding:5px 7px}
+  .routeSequenceLabel{display:none}.routeSequenceFlow{gap:4px}.routeSequenceFlow b{font-size:7px;padding:4px 6px}.routeSequenceFlow i{font-size:9px}
+}

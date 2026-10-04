@@ -84,11 +84,11 @@ function buildLayers(){
   landingLayer.set('layerId','landing-sites');
   markerLayer = new ol.layer.Vector({
     source:new ol.source.Vector(),
-    style: feature => pointStyle(feature.get('kind'), feature.get('label')),
+    style: feature => pointStyle(feature.get('kind'), feature.get('label'), feature),
     zIndex:10
   });
   routeLayer = new ol.layer.Vector({ source:new ol.source.Vector(), zIndex:11 });
-  routeLayer.setStyle(feature => routeStyle(feature.get('selected'),feature.get('kind')));
+  routeLayer.setStyle(feature => routeStyle(feature));
   analysisLayer = new ol.layer.Vector({source:new ol.source.Vector(),zIndex:15,style:feature=>analysisHighlightStyle(feature)});
 
   return { projection, layers:[imageryLayer,molaLayer,slopeLayer,roughnessLayer,knownLayer,landingLayer,routeLayer,markerLayer,analysisLayer] };
@@ -125,34 +125,96 @@ function hexAlpha(hex,alpha='33'){
   const value=String(hex||'').trim();
   return /^#[0-9a-f]{6}$/i.test(value) ? `${value}${alpha}` : value;
 }
-function pointStyle(kind,label){
+function pointStyle(kind,label,feature){
   const c=themeColors();
-  const color = kind==='base' ? c.success : kind==='reference' ? c.primary2 : kind==='optional' ? c.accent2 : c.accent;
-  const stroke=new ol.style.Stroke({color:c.text||'#ffffff',width:2});
-  let image;
+  const textColor=c.text||'#ffffff', bg=c.bg||'#020611';
+  const accent=c.accent||'#8a5cff', success=c.success||'#54e0a6', warning=c.warning||'#ffc857';
+  const name=String(feature?.get?.('name')||'').trim();
+  const returnsHome=Boolean(feature?.get?.('returnsHome'));
+  const styles=[];
   if(kind==='base'){
-    image=new ol.style.RegularShape({points:4,radius:10,angle:Math.PI/4,fill:new ol.style.Fill({color}),stroke});
-  } else if(kind==='target' || kind==='science'){
-    image=new ol.style.RegularShape({points:6,radius:10,angle:Math.PI/6,fill:new ol.style.Fill({color}),stroke});
-  } else if(kind==='optional'){
-    image=new ol.style.RegularShape({points:4,radius:9,angle:0,fill:new ol.style.Fill({color}),stroke});
-  } else {
-    image=new ol.style.Circle({radius:8,fill:new ol.style.Fill({color}),stroke});
+    styles.push(new ol.style.Style({
+      image:new ol.style.RegularShape({points:6,radius:17,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(success,'28')}),stroke:new ol.style.Stroke({color:hexAlpha(success,'75'),width:6})})
+    }));
+    styles.push(new ol.style.Style({
+      image:new ol.style.RegularShape({points:6,radius:13,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(bg,'ee')}),stroke:new ol.style.Stroke({color:success,width:2.8})}),
+      text:new ol.style.Text({text:'⌂',offsetY:1,fill:new ol.style.Fill({color:success}),stroke:new ol.style.Stroke({color:bg,width:2}),font:'900 15px Inter,Segoe UI,sans-serif'})
+    }));
+    styles.push(new ol.style.Style({
+      text:new ol.style.Text({text:returnsHome?ui('BASE · HOME','BASE · HOME'):ui('BASE','BASE'),offsetY:-29,fill:new ol.style.Fill({color:textColor}),stroke:new ol.style.Stroke({color:bg,width:5}),font:'900 10px "DM Mono",Consolas,monospace',padding:[2,5,2,5]})
+    }));
+    return styles;
   }
+  if(kind==='finish'){
+    styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:16,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(warning,'24')}),stroke:new ol.style.Stroke({color:hexAlpha(warning,'72'),width:5})})}));
+    styles.push(new ol.style.Style({
+      image:new ol.style.RegularShape({points:6,radius:12,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(bg,'ef')}),stroke:new ol.style.Stroke({color:warning,width:2.6})}),
+      text:new ol.style.Text({text:String(label||'F'),offsetY:1,fill:new ol.style.Fill({color:warning}),stroke:new ol.style.Stroke({color:bg,width:2}),font:'950 11px "DM Mono",Consolas,monospace'})
+    }));
+    styles.push(new ol.style.Style({text:new ol.style.Text({text:ui('FIN','FINISH'),offsetY:-27,fill:new ol.style.Fill({color:textColor}),stroke:new ol.style.Stroke({color:bg,width:5}),font:'900 9px "DM Mono",Consolas,monospace'})}));
+    return styles;
+  }
+  if(kind==='target' || kind==='science'){
+    styles.push(new ol.style.Style({image:new ol.style.RegularShape({points:6,radius:16,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(accent,'22')}),stroke:new ol.style.Stroke({color:hexAlpha(accent,'70'),width:5})})}));
+    styles.push(new ol.style.Style({
+      image:new ol.style.RegularShape({points:6,radius:12,angle:Math.PI/6,fill:new ol.style.Fill({color:hexAlpha(bg,'ed')}),stroke:new ol.style.Stroke({color:accent,width:2.7})}),
+      text:new ol.style.Text({text:String(label||'•').padStart(2,'0'),offsetY:1,fill:new ol.style.Fill({color:textColor}),stroke:new ol.style.Stroke({color:bg,width:2}),font:'950 10px "DM Mono",Consolas,monospace'})
+    }));
+    if(name){
+      styles.push(new ol.style.Style({text:new ol.style.Text({text:name.length>18?`${name.slice(0,17)}…`:name,offsetY:27,fill:new ol.style.Fill({color:hexAlpha(textColor,'e8')}),stroke:new ol.style.Stroke({color:bg,width:4}),font:'800 8.5px Inter,Segoe UI,sans-serif',padding:[1,3,1,3]})}));
+    }
+    return styles;
+  }
+  const color = kind==='reference' ? c.primary2 : kind==='optional' ? c.accent2 : accent;
   return new ol.style.Style({
-    image,
-    text:new ol.style.Text({ text:label||'P', offsetY:-20, fill:new ol.style.Fill({color:c.text||'#ffffff'}), stroke:new ol.style.Stroke({color:c.bg||'#101010',width:4}), font:'800 11px "DM Mono",Consolas,monospace' })
+    image:new ol.style.Circle({radius:8,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:textColor,width:2})}),
+    text:new ol.style.Text({ text:label||'P', offsetY:-20, fill:new ol.style.Fill({color:textColor}), stroke:new ol.style.Stroke({color:bg,width:4}), font:'800 11px "DM Mono",Consolas,monospace' })
   });
 }
-function routeStyle(selected,kind){
+function routeFractionPoint(coords,fraction){
+  if(!Array.isArray(coords)||coords.length<2)return null;
+  const seg=[];let total=0;
+  for(let i=1;i<coords.length;i++){
+    const dx=coords[i][0]-coords[i-1][0],dy=coords[i][1]-coords[i-1][1],len=Math.hypot(dx,dy);
+    seg.push({i,len,dx,dy});total+=len;
+  }
+  if(total<=0)return null;
+  let target=total*Math.max(0,Math.min(1,fraction)),walk=0;
+  for(const part of seg){
+    if(walk+part.len>=target){
+      const a=coords[part.i-1],b=coords[part.i],t=part.len?((target-walk)/part.len):0;
+      return {coord:[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],angle:Math.atan2(part.dy,part.dx)};
+    }
+    walk+=part.len;
+  }
+  const a=coords[coords.length-2],b=coords[coords.length-1];
+  return {coord:b.slice(),angle:Math.atan2(b[1]-a[1],b[0]-a[0])};
+}
+function routeArrowStyles(feature,color,c){
+  const geometry=feature?.getGeometry?.();
+  const coords=geometry?.getCoordinates?.();
+  if(!Array.isArray(coords)||coords.length<2)return [];
+  const fractions=coords.length>10?[0.22,0.50,0.78]:[0.36,0.72];
+  return fractions.map(fr=>{
+    const sample=routeFractionPoint(coords,fr);if(!sample)return null;
+    return new ol.style.Style({
+      geometry:new ol.geom.Point(sample.coord),
+      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,font:'900 15px Arial,sans-serif',fill:new ol.style.Fill({color:c.text||'#fff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:4}),padding:[1,1,1,1]})
+    });
+  }).filter(Boolean);
+}
+function routeStyle(feature){
+  const selected=feature?.get?.('selected'),kind=feature?.get?.('kind');
   const c=themeColors();
   const color = selected ? c.accent : kind==='risk' ? c.success : kind==='distance' ? c.text : c.accent2;
   if(selected){
-    return [
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'2b'),width:18,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','b8'),width:9,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color,width:4.8,lineCap:'round',lineJoin:'round'})})
+    const baseStyles=[
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'28'),width:19,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','c9'),width:10,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color,width:5.2,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','55'),width:1.1,lineDash:[2,10],lineCap:'round'})})
     ];
+    return baseStyles.concat(routeArrowStyles(feature,color,c));
   }
   return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:2.2, lineDash:[9,8]}) });
 }
@@ -371,10 +433,25 @@ function drawPointMarkers(){
   if(!markerLayer) return;
   const source=markerLayer.getSource(); source.clear();
   const visit=optimizedVisitIndexMap();
+  const mission=selectedMission?.();
+  const seq=mission?.includedPoints||mission?.sequence||[];
+  const startKey=seq.length?pointCoordKey(seq[0]):(missionPoints[0]?pointCoordKey(missionPoints[0]):null);
+  const endPoint=seq.length?seq[seq.length-1]:null;
+  const endKey=endPoint?pointCoordKey(endPoint):null;
+  const returnsHome=Boolean(seq.length>1 && startKey && endKey===startKey);
   missionPoints.forEach((p,i)=>{
     const base=p.type==='base'||i===0;
-    const label=base?'B':String(visit.get(pointCoordKey(p))||i);
-    source.addFeature(new ol.Feature({geometry:new ol.geom.Point([p.lon,p.lat]),kind:base?'base':'target',label}));
+    const key=pointCoordKey(p),visitNo=visit.get(key);
+    const isFinish=Boolean(!base && endKey && key===endKey && !returnsHome);
+    const label=base?'B':String(visitNo||i);
+    source.addFeature(new ol.Feature({
+      geometry:new ol.geom.Point([p.lon,p.lat]),
+      kind:base?'base':isFinish?'finish':'target',
+      label,
+      name:p.name||'',
+      visit:visitNo||null,
+      returnsHome:base&&returnsHome
+    }));
   });
   if(!missionPoints.length) source.addFeature(new ol.Feature({geometry:new ol.geom.Point([LANDING.lon,LANDING.lat]),kind:'reference',label:'P'}));
 }
@@ -1160,6 +1237,23 @@ function renderMissionAnalytics(mission){
   if(analyticsPinnedPoint)syncAnalyticsCursor(analyticsPinnedPoint);
 }
 
+function updateRouteSequenceStrip(mission){
+  const strip=$('routeSequenceStrip'),flow=$('routeSequenceFlow');if(!strip||!flow)return;
+  const seq=mission?.includedPoints||mission?.sequence||[];
+  if(!mission||seq.length<2){strip.classList.add('is-empty');flow.innerHTML=`<b>${ui('BASE','BASE')}</b><i>→</i><em>${ui('CALCULA UNA RUTA','CALCULATE A ROUTE')}</em>`;return;}
+  strip.classList.remove('is-empty');
+  let visit=0;
+  const startKey=pointCoordKey(seq[0]);
+  const parts=seq.map((p,i)=>{
+    const isBase=p.type==='base'||i===0;
+    const isHome=i===seq.length-1&&i>0&&pointCoordKey(p)===startKey;
+    const code=isBase?(isHome?'HOME':'BASE'):String(++visit).padStart(2,'0');
+    const cls=isHome?'home':isBase?'base':'point';
+    return `<b class="${cls}" title="${escapeHtml(p.name||code)}">${code}</b>`;
+  });
+  flow.innerHTML=parts.join('<i>→</i>');
+}
+
 function renderMissionTimeline(mission){
   const host=$('missionTimeline');if(!host)return;
   const seq=mission?.includedPoints||mission?.sequence||missionPoints;
@@ -1202,7 +1296,7 @@ function renderMission(mission){
   $('avgSlope').textContent=Number.isFinite(m.avgSlopeDeg)?`${m.avgSlopeDeg.toFixed(1)}°`:'—';$('segments').textContent=m.segments;$('legsCount').textContent=mission.legs.length;$('dwellTotal').textContent=`${Number.isFinite(mission.dwellMinutes)?mission.dwellMinutes:0} min`;$('missionMargin').textContent=formatSignedMargin(margin);
   if($('avgTransitability'))$('avgTransitability').textContent=Number.isFinite(m.avgTransitability)?`${m.avgTransitability.toFixed(0)}/100`:'—';if($('minTransitabilityMetric'))$('minTransitabilityMetric').textContent=Number.isFinite(m.minTransitability)?`${m.minTransitability.toFixed(0)}/100`:'—';if($('avgConfidence'))$('avgConfidence').textContent=Number.isFinite(m.avgConfidence)?`${m.avgConfidence.toFixed(0)}%`:'—';if($('minConfidenceMetric'))$('minConfidenceMetric').textContent=Number.isFinite(m.minConfidence)?`${m.minConfidence.toFixed(0)}%`:'—';if($('avgRoughnessDisplay'))$('avgRoughnessDisplay').textContent=Number.isFinite(m.avgRoughnessDeg)?`${m.avgRoughnessDeg.toFixed(1)}°`:'—';
   $('calcParams').textContent=`${mission.params.speed.toFixed(1)} km/h · EVA ${mission.params.evaTime.toFixed(1)} h · margen ${mission.params.returnMargin}% · pendiente ≤${mission.params.maxSlopeLimit.toFixed(0)}° · transit. ≥${mission.params.minTransitability.toFixed(0)} · confianza ≥${mission.params.minConfidence.toFixed(0)}%`;
-  renderMissionTimeline(mission);renderTerrainProfile(mission);renderMissionAnalytics(mission);updateMissionHud(mission);updateHeaderStatus();drawPointMarkers();
+  renderMissionTimeline(mission);updateRouteSequenceStrip(mission);renderTerrainProfile(mission);renderMissionAnalytics(mission);updateMissionHud(mission);updateHeaderStatus();drawPointMarkers();
   $('recalculate').disabled=false;$('saveMission').disabled=false;if($('lastCalculated'))$('lastCalculated').textContent=lastCalculatedAt?`Último cálculo: ${lastCalculatedAt.toLocaleString('es-NI',{dateStyle:'short',timeStyle:'short'})}`:'Último cálculo: —';
 }
 
@@ -1230,7 +1324,7 @@ function updatePlanningUI(){
   $('pointCount').textContent=missionPoints.length;$('calculate').disabled=busy||missionPoints.length<2;$('saveMission').disabled=busy||!currentMission;
   $('selectionHint').textContent=selecting?`Modo misión activo · toca el mapa para agregar el punto ${missionPoints.length+1}.`:(missionPoints.length?`${missionPoints.length} puntos planificados · JEZERO optimizará el orden al calcular.`:'Activa “Nueva misión” y toca el mapa para agregar puntos.');
   const active=currentMission?.[document.querySelector('input[name="mode"]:checked')?.value||'balanced']||null;
-  renderMissionList();renderMissionTimeline(active);updateMissionHud(active);updateHeaderStatus();updateSettingsSummary();
+  renderMissionList();renderMissionTimeline(active);updateRouteSequenceStrip(active);updateMissionHud(active);updateHeaderStatus();updateSettingsSummary();
 }
 
 function newMission(){ missionPoints=[];currentMission=null;selecting=true;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI(); }
@@ -1260,7 +1354,7 @@ function resetMetrics(){
   if($('lastCalculated'))$('lastCalculated').textContent=ui('Último cálculo: —','Last calculation: —');
   if($('recalculate'))$('recalculate').disabled=true;
   if($('saveMission'))$('saveMission').disabled=true;
-  renderTerrainProfile(null); renderMissionAnalytics(null); renderMissionTimeline(null); updateMissionHud(null); updateHeaderStatus();
+  renderTerrainProfile(null); renderMissionAnalytics(null); renderMissionTimeline(null); updateRouteSequenceStrip(null); updateMissionHud(null); updateHeaderStatus();
 }
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}
 function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2;$('recalculate').disabled=b||!currentMission;$('saveMission').disabled=b||!currentMission;if(msg)$('statusText').textContent=msg;else $('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}
@@ -1333,7 +1427,7 @@ async function exportMissionPdf(mode){
     },
     software:{
       name:'JEZERO',
-      version:'V36',
+      version:'V38',
       interfaceTheme:themeInfo().label,
       themeKey:themeInfo().key,
       reportLanguage:uiLang()
@@ -1464,7 +1558,7 @@ function initializeSettings(){
 }
 function exportMissionJson(){
   const mode=document.querySelector('input[name="mode"]:checked')?.value||'balanced';
-  const payload={format:'JEZERO-MISSION',version:36,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type==='base'?'base':'target',dwellMin:Number(p.dwellMin)||0})),returnBase:$('returnBase')?.checked!==false,optimizeOrder:$('optimizeOrder')?.checked!==false,mode,params:readOperationalDefaults()};
+  const payload={format:'JEZERO-MISSION',version:38,exportedAt:new Date().toISOString(),missionMeta:getMissionSettings(),interface:{language:uiLang(),theme:themeInfo().key},points:missionPoints.map(p=>({lat:p.lat,lon:p.lon,name:p.name,type:p.type==='base'?'base':'target',dwellMin:Number(p.dwellMin)||0})),returnBase:$('returnBase')?.checked!==false,optimizeOrder:$('optimizeOrder')?.checked!==false,mode,params:readOperationalDefaults()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
   const code=(payload.missionMeta.missionCode||'mision').replace(/[^a-z0-9_-]+/gi,'-'); a.href=url; a.download=`jezero-${code}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1200);
   showToast(ui('Misión exportada a JSON.','Mission exported to JSON.'));
