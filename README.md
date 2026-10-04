@@ -1,3 +1,5 @@
-# JEZERO V41
+# JEZERO V42 — EVA Mission System
 
-Corrección de composición del mapa después de V40. El objetivo es recuperar espacio visual y evitar overlays que parezcan barras de depuración.
+Actualización centrada en claridad operacional y diferenciación real de estrategias de ruta.
+
+La lógica de elevación, límites duros, optimización de puntos, resultados interactivos y generación PDF se conserva. V42 modifica la función de costo de las estrategias, su corredor de búsqueda y su representación visual.

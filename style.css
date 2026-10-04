@@ -1085,3 +1085,111 @@ body[data-module="analysis"] .mapScaleChip{display:none!important}
   .mapCoordChip{display:none!important}
   .routeSequenceFlow{max-width:100%}
 }
+
+/* =========================================================
+   JEZERO V42 — COMMAND BAR + PROFESSIONAL ROUTE STRATEGIES
+   ========================================================= */
+
+/* Toolbar: una consola segmentada, no una fila de cajas independientes. */
+.mapCommandBar{
+  display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;
+  max-width:100%!important;justify-content:flex-end!important;
+}
+.mapCommandBar .toolCluster{
+  display:flex;align-items:center;overflow:hidden;
+  min-height:38px;
+  border:1px solid color-mix(in srgb,var(--theme-line-strong) 76%,var(--theme-text) 8%);
+  border-radius:12px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--theme-panel-3) 92%,transparent),color-mix(in srgb,var(--theme-bg) 92%,transparent));
+  box-shadow:0 10px 24px rgba(0,0,0,.30),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 7%,transparent);
+  backdrop-filter:blur(15px) saturate(1.08);
+}
+.mapCommandBar .toolCluster + .toolCluster{margin-left:0!important}
+.mapCommandBar .toolButton{
+  min-width:0!important;min-height:38px!important;height:38px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  padding:0 12px!important;margin:0!important;
+  border:0!important;border-right:1px solid color-mix(in srgb,var(--theme-line) 65%,transparent)!important;
+  border-radius:0!important;clip-path:none!important;
+  background:transparent!important;color:var(--theme-soft)!important;
+  box-shadow:none!important;transform:none!important;
+  font:800 8px/1 "DM Mono",Consolas,monospace!important;letter-spacing:.2px!important;
+  white-space:nowrap!important;
+  transition:background .14s ease,color .14s ease,box-shadow .14s ease!important;
+}
+.mapCommandBar .toolButton:last-child{border-right:0!important}
+.mapCommandBar .toolButton svg{
+  width:15px;height:15px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+.mapCommandBar .toolButton.iconOnly{width:38px!important;padding:0!important}
+.mapCommandBar .toolButton:hover{
+  background:color-mix(in srgb,var(--theme-primary-2) 18%,transparent)!important;
+  color:var(--theme-text)!important;box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--theme-accent-2) 75%,transparent)!important;
+}
+.mapCommandBar .toolButton:active{background:color-mix(in srgb,var(--theme-primary) 34%,transparent)!important;box-shadow:inset 0 2px 7px rgba(0,0,0,.28)!important}
+.mapCommandBar .toolButton.is-active{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--theme-primary-2) 34%,var(--theme-panel)),color-mix(in srgb,var(--theme-primary) 30%,var(--theme-bg)))!important;
+  color:var(--theme-text)!important;box-shadow:inset 0 -2px 0 var(--theme-accent-2),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 10%,transparent)!important;
+}
+.mapCommandBar .zoomCluster .toolButton{color:var(--theme-accent-2)!important}
+.mapCommandBar .primaryTools .toolButton span{display:inline-block}
+
+/* Estrategias: tarjetas instrumentales con iconografía vectorial JEZERO. */
+.strategyCards{display:grid;gap:8px}
+.modeOption.strategyCard{
+  position:relative!important;display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;
+  gap:10px!important;min-height:68px!important;padding:9px 10px!important;
+  border:1px solid color-mix(in srgb,var(--theme-line) 86%,var(--theme-text) 5%)!important;
+  border-radius:10px!important;clip-path:none!important;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--theme-panel-2) 98%,transparent),color-mix(in srgb,var(--theme-panel) 97%,#000))!important;
+  box-shadow:0 5px 13px rgba(0,0,0,.18),inset 0 1px 0 color-mix(in srgb,var(--theme-text) 4%,transparent)!important;
+  cursor:pointer;overflow:hidden;
+}
+.modeOption.strategyCard::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .15s ease,box-shadow .15s ease;
+}
+.modeOption.strategyCard:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--theme-line-strong) 74%,var(--theme-accent-2) 16%)!important;background:color-mix(in srgb,var(--theme-primary) 15%,var(--theme-panel-2))!important}
+.modeOption.strategyCard:has(input:checked),.modeOption.strategyCard.is-selected{
+  border-color:color-mix(in srgb,var(--theme-accent-2) 58%,var(--theme-line-strong))!important;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--theme-primary) 28%,var(--theme-panel-2)),color-mix(in srgb,var(--theme-panel) 96%,#000))!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.26),inset 0 0 0 1px color-mix(in srgb,var(--theme-accent-2) 12%,transparent)!important;
+}
+.modeOption.strategyCard:has(input:checked)::after,.modeOption.strategyCard.is-selected::after{background:var(--theme-accent-2);box-shadow:0 0 14px color-mix(in srgb,var(--theme-accent-2) 58%,transparent)}
+.modeOption.strategyCard input{
+  position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;
+}
+.strategyIcon{
+  width:38px;height:38px;display:grid;place-items:center;border-radius:9px;
+  color:var(--theme-muted);border:1px solid color-mix(in srgb,var(--theme-line) 82%,transparent);
+  background:color-mix(in srgb,var(--theme-bg) 60%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--theme-text) 5%,transparent);
+}
+.strategyIcon svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.strategyIcon .riskZone{fill:color-mix(in srgb,var(--theme-warning) 18%,transparent);stroke:var(--theme-warning)}
+.strategyCard:has(input:checked) .strategyIcon{color:var(--theme-accent-2);border-color:color-mix(in srgb,var(--theme-accent-2) 45%,var(--theme-line));background:color-mix(in srgb,var(--theme-primary) 28%,transparent);box-shadow:0 0 16px color-mix(in srgb,var(--theme-accent-2) 13%,transparent)}
+.strategyCard[data-strategy-card="risk"]:has(input:checked) .strategyIcon{color:var(--theme-success)}
+.strategyCard[data-strategy-card="distance"]:has(input:checked) .strategyIcon{color:var(--theme-text)}
+.strategyCopy{display:flex!important;flex-direction:column!important;gap:3px!important;min-width:0!important}
+.strategyCopy b{font:900 10px/1.15 "DM Mono",Consolas,monospace!important;letter-spacing:.35px;color:var(--theme-text)!important}
+.strategyCopy small{font:600 8px/1.35 Inter,"Segoe UI",sans-serif!important;color:var(--theme-muted)!important}
+.strategyCopy em{
+  display:block;margin-top:2px;font:800 7.5px/1.25 "DM Mono",Consolas,monospace;font-style:normal;color:var(--theme-accent-2);
+  white-space:normal;overflow-wrap:anywhere;
+}
+.strategyCard.over-budget .strategyCopy em{color:var(--theme-warning)}
+
+/* El drawer sigue alineado con la nueva command bar. */
+.mapLayerDrawer{top:48px!important}
+
+@media(max-width:1180px){
+  .mapCommandBar .toolButton{padding:0 9px!important}
+  .mapCommandBar .toolButton span{display:none!important}
+  .mapCommandBar .toolButton:not(.iconOnly){width:40px!important;padding:0!important}
+}
+@media(max-width:760px){
+  .mapCommandBar{gap:5px!important}
+  .mapCommandBar .toolCluster{min-height:36px;border-radius:10px}
+  .mapCommandBar .toolButton{height:36px!important;min-height:36px!important}
+  .modeOption.strategyCard{grid-template-columns:36px minmax(0,1fr)!important;min-height:62px!important}
+  .strategyIcon{width:34px;height:34px}.strategyIcon svg{width:25px;height:25px}
+}

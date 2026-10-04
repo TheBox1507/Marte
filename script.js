@@ -9,7 +9,7 @@ const DEFAULTS_KEY = 'jezero-operational-defaults-v29';
 const PANEL_STATE_KEY = 'jezero-panel-state-v34';
 const MAP_VIEW_KEY = 'jezero-map-view-v34';
 const BASE_MAP_KEY = 'jezero-base-map-v34';
-const JEZERO_UI_VERSION = 'V41';
+const JEZERO_UI_VERSION = 'V42';
 
 let D;
 let map, markerLayer, routeLayer, analysisLayer, molaLayer, imageryLayer, slopeLayer, roughnessLayer, landingLayer, knownLayer;
@@ -198,18 +198,18 @@ function routeArrowStyles(feature,color,c){
   const geometry=feature?.getGeometry?.();
   const coords=geometry?.getCoordinates?.();
   if(!Array.isArray(coords)||coords.length<2)return [];
-  const fractions=coords.length>10?[0.24,0.50,0.76]:[0.38,0.70];
+  const fractions=coords.length>12?[0.20,0.40,0.60,0.80]:coords.length>7?[0.27,0.54,0.79]:[0.38,0.72];
   const styles=[];
   fractions.forEach(fr=>{
     const sample=routeFractionPoint(coords,fr);if(!sample)return;
-    // Sombra corta para separar la flecha del raster marciano.
+    const rotation=Math.PI/2-sample.angle;
     styles.push(new ol.style.Style({
       geometry:new ol.geom.Point(sample.coord),
-      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,offsetX:1.2,offsetY:1.6,font:'900 14px Arial,sans-serif',fill:new ol.style.Fill({color:'rgba(0,0,0,.56)'}),stroke:new ol.style.Stroke({color:'rgba(0,0,0,.58)',width:5})})
+      image:new ol.style.RegularShape({points:3,radius:8.7,angle:0,rotation,rotateWithView:true,displacement:[1,-1],fill:new ol.style.Fill({color:'rgba(0,0,0,.58)'}),stroke:new ol.style.Stroke({color:'rgba(0,0,0,.58)',width:3})})
     }));
     styles.push(new ol.style.Style({
       geometry:new ol.geom.Point(sample.coord),
-      text:new ol.style.Text({text:'➤',rotation:-sample.angle,rotateWithView:true,font:'900 14px Arial,sans-serif',fill:new ol.style.Fill({color:c.text||'#fff'}),stroke:new ol.style.Stroke({color:c.bg||'#020611',width:3.5}),padding:[1,1,1,1]})
+      image:new ol.style.RegularShape({points:3,radius:7.1,angle:0,rotation,rotateWithView:true,fill:new ol.style.Fill({color}),stroke:new ol.style.Stroke({color:c.text||'#fff',width:1.3})})
     }));
   });
   return styles;
@@ -217,18 +217,21 @@ function routeArrowStyles(feature,color,c){
 function routeStyle(feature){
   const selected=feature?.get?.('selected'),kind=feature?.get?.('kind');
   const c=themeColors();
-  const color = selected ? c.accent : kind==='risk' ? c.success : kind==='distance' ? c.text : c.accent2;
+  const color = kind==='risk' ? (c.success||'#54e0a6') : kind==='distance' ? (c.text||'#fff') : (c.accent||'#8a5cff');
   if(selected){
+    const strategyGlow=kind==='risk'?hexAlpha(c.success||'#54e0a6','2d'):kind==='distance'?hexAlpha(c.text||'#fff','20'):hexAlpha(c.accent2||c.primary2,'2b');
+    const centerDash=kind==='distance'?[2,9]:kind==='risk'?[7,6]:[1,8];
     const baseStyles=[
-      new ol.style.Style({stroke:new ol.style.Stroke({color:'rgba(0,0,0,.36)',width:23,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.accent2||c.primary2,'24'),width:19,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','df'),width:10.5,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color,width:5.2,lineCap:'round',lineJoin:'round'})}),
-      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.text||'#fff','60'),width:1.15,lineDash:[2,10],lineCap:'round'})})
+      new ol.style.Style({stroke:new ol.style.Stroke({color:'rgba(0,0,0,.48)',width:22,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:strategyGlow,width:17,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:hexAlpha(c.bg||'#020611','e8'),width:10,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color,width:5.1,lineCap:'round',lineJoin:'round'})}),
+      new ol.style.Style({stroke:new ol.style.Stroke({color:kind==='distance'?hexAlpha(c.accent2||'#55b7ff','c8'):hexAlpha(c.text||'#fff','72'),width:1.25,lineDash:centerDash,lineCap:'round'})})
     ];
     return baseStyles.concat(routeArrowStyles(feature,color,c));
   }
-  return new ol.style.Style({ stroke:new ol.style.Stroke({color, width:2.2, lineDash:[9,8]}) });
+  const dash=kind==='risk'?[3,8]:kind==='distance'?[10,7]:[7,7];
+  return new ol.style.Style({ stroke:new ol.style.Stroke({color:hexAlpha(color,'a8'), width:2.2, lineDash:dash}) });
 }
 
 function analysisHighlightStyle(feature){
@@ -608,9 +611,10 @@ function neighbors(node,grid){
   const out=[]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) if(dr||dc){const r=node.r+dr,c=node.c+dc;if(r>=0&&r<grid.rows&&c>=0&&c<grid.cols) out.push(grid.nodes[r*grid.cols+c]);} return out;
 }
 function heuristic(n,goal,mode,params){
-  const d=haversine(n,goal);
-  if(mode==='distance') return d;
-  return mode==='risk' ? d*1.02 : d*1.01;
+  // La distancia geodésica es una cota inferior válida para las tres estrategias.
+  // Mantener la heurística neutra evita que el A* esconda diferencias introducidas
+  // por los costos de terreno de cada estrategia.
+  return haversine(n,goal);
 }
 function analyzeEdge(a,b,params){
   const d=haversine(a,b);
@@ -643,9 +647,11 @@ function edgeCost(a,b,mode,params){
   const transitPenalty=clamp((100-x.transitability)/100,0,1);
   const uncertaintyPenalty=clamp((100-x.confidence)/100,0,1);
   const roughPenalty=clamp((x.roughnessDeg||0)/12,0,1.5);
-  if(mode==='distance') return d*(1+transitPenalty*.10+uncertaintyPenalty*.08);
-  if(mode==='risk') return d*(1+directionalSlopeNorm*1.55+transitPenalty*1.8+uncertaintyPenalty*1.25+roughPenalty*.75)+travelHours*.18;
-  return d*(1+directionalSlopeNorm*.75+transitPenalty*.8+uncertaintyPenalty*.55+roughPenalty*.35)+travelHours*.06;
+  // V42: las estrategias tienen objetivos deliberadamente distintos. Los límites
+  // duros se aplican arriba en analyzeEdge() para las tres por igual.
+  if(mode==='distance') return d;
+  if(mode==='risk') return d*(1+directionalSlopeNorm*3.15+transitPenalty*3.25+uncertaintyPenalty*2.45+roughPenalty*1.65)+travelHours*.45;
+  return d*(1+directionalSlopeNorm*1.15+transitPenalty*1.20+uncertaintyPenalty*.90+roughPenalty*.62)+travelHours*.11;
 }
 function aStar(grid,start,goal,mode,params){
   const open=[start], came=new Map(), g=new Map([[key(start),0]]), f=new Map([[key(start),heuristic(start,goal,mode,params)]]);
@@ -671,7 +677,7 @@ const key=n=>`${n.r}:${n.c}`;
 function forceEndpoints(path,a,b){ if(!path||path.length<2)return path; return [{...a,elevationM:a.elevationM},...path.slice(1,-1),{...b,elevationM:b.elevationM}]; }
 function shortestLonDelta(a,b){ return ((b-a+540)%360)-180; }
 function interpolateLon(a,b,t){ return normalizeLon(a + shortestLonDelta(a,b)*t); }
-function buildGrid(a,b,rows=17,cols=17){
+function buildGrid(a,b,rows=17,cols=17,mode='balanced'){
   // V26: corredor 2D orientado al tramo. La versión anterior variaba la latitud
   // por fila, pero reutilizaba la misma longitud por columna; en tramos casi N/S
   // las columnas podían colapsar y A* no tenía espacio real para rodear terreno.
@@ -684,7 +690,10 @@ function buildGrid(a,b,rows=17,cols=17){
   const norm=Math.max(.001,Math.hypot(eastKm,northKm));
   const perpEast=-northKm/norm;
   const perpNorth=eastKm/norm;
-  const corridorHalfWidthKm=clamp(directKm*.35,4,120);
+  const corridorFactor=mode==='distance'?.18:mode==='risk'?.72:.42;
+  const minWidth=mode==='distance'?2.5:mode==='risk'?8:4;
+  const maxWidth=mode==='distance'?70:mode==='risk'?240:145;
+  const corridorHalfWidthKm=clamp(directKm*corridorFactor,minWidth,maxWidth);
   const nodes=[];
 
   for(let r=0;r<rows;r++){
@@ -764,7 +773,7 @@ function gridSizeForDistanceKm(distanceKm){
 }
 async function calculateLeg(a,b,mode,params){
   const gridSize=gridSizeForDistanceKm(haversine(a,b));
-  const grid=buildGrid(a,b,gridSize,gridSize);
+  const grid=buildGrid(a,b,gridSize,gridSize,mode);
   const samples=grid.nodes.map(n=>({lat:n.lat,lon:n.lon}));
   samples.push({lat:a.lat,lon:a.lon},{lat:b.lat,lon:b.lon});
   const elevated=await getElevations(samples);
@@ -894,9 +903,13 @@ function waypointOrderSeed(basePoints,returnBase,optimize){
 }
 function missionOrderObjective(mission,mode){
   const m=mission?.metrics||{}, risk=Number(mission?.score)||0;
-  if(mode==='distance') return (Number(m.distanceKm)||0) + (Number(m.uncertainDistanceKm)||0)*0.04;
-  if(mode==='risk') return (Number(mission?.duration)||0) + risk*0.045 + (Number(m.difficultDistanceKm)||0)*1.4 + (Number(m.uncertainDistanceKm)||0)*0.8 + Math.max(0,70-(Number(m.avgTransitability)||70))*0.025;
-  return (Number(mission?.duration)||0) + (Number(m.distanceKm)||0)*0.18 + risk*0.018 + (Number(m.difficultDistanceKm)||0)*0.65 + (Number(m.uncertainDistanceKm)||0)*0.32;
+  const distance=Number(m.distanceKm)||0, duration=Number(mission?.duration)||0;
+  const difficult=Number(m.difficultDistanceKm)||0, uncertain=Number(m.uncertainDistanceKm)||0;
+  const transit=Number.isFinite(Number(m.avgTransitability))?Number(m.avgTransitability):60;
+  const slope=Number(m.maxSlopeDeg)||0, rough=Number(m.avgRoughnessDeg)||0;
+  if(mode==='distance') return distance;
+  if(mode==='risk') return distance*.18 + duration*.72 + risk*.115 + difficult*4.2 + uncertain*2.4 + Math.max(0,88-transit)*.12 + slope*.16 + rough*.20;
+  return distance*.48 + duration*.72 + risk*.042 + difficult*1.45 + uncertain*.82 + Math.max(0,76-transit)*.052 + slope*.055 + rough*.07;
 }
 async function refineWaypointOrder(base,seedOrder,returnBase,mode,params,legCache){
   let order=seedOrder.slice();
@@ -1292,6 +1305,40 @@ function updateHeaderStatus(){
   if($('headerTargetCount'))$('headerTargetCount').textContent=String(Math.max(0,missionPoints.filter((p,i)=>i>0&&p.type!=='base').length));
 }
 
+function strategyLabel(mode){
+  return mode==='distance'?ui('Más directa','Most direct'):mode==='risk'?ui('Menor exposición','Lower exposure'):ui('Equilibrada','Balanced');
+}
+function strategySummary(mission){
+  if(!mission?.metrics) return ui('Calcula para comparar','Calculate to compare');
+  const m=mission.metrics;
+  const dist=Number.isFinite(m.distanceKm)?`${m.distanceKm.toFixed(2)} km`:'—';
+  const slope=Number.isFinite(m.maxSlopeDeg)?`${m.maxSlopeDeg.toFixed(1)}°`:'—';
+  const trv=Number.isFinite(m.avgTransitability)?`TRV ${Math.round(m.avgTransitability)}`:'TRV —';
+  return `${dist} · ${slope} · ${trv}`;
+}
+function updateStrategyCards(all=currentMission){
+  ['balanced','risk','distance'].forEach(mode=>{
+    const card=document.querySelector(`[data-strategy-card="${mode}"]`);
+    const summary=document.querySelector(`[data-strategy-summary="${mode}"]`);
+    if(summary) summary.textContent=strategySummary(all?.[mode]);
+    if(card){
+      const m=all?.[mode];
+      card.classList.toggle('has-result',Boolean(m));
+      card.classList.toggle('over-budget',Boolean(m?.overBudget));
+      const selected=document.querySelector(`input[name="mode"][value="${mode}"]`)?.checked;
+      card.classList.toggle('is-selected',Boolean(selected));
+    }
+  });
+}
+function strategiesEquivalent(all=currentMission){
+  const ms=['distance','balanced','risk'].map(k=>all?.[k]).filter(Boolean);
+  if(ms.length<3) return false;
+  const distances=ms.map(m=>Number(m.metrics?.distanceKm)||0);
+  const transits=ms.map(m=>Number(m.metrics?.avgTransitability)||0);
+  const slopes=ms.map(m=>Number(m.metrics?.maxSlopeDeg)||0);
+  return Math.max(...distances)-Math.min(...distances)<.03 && Math.max(...transits)-Math.min(...transits)<1 && Math.max(...slopes)-Math.min(...slopes)<.4;
+}
+
 function renderMission(mission){
   const m=mission.metrics,score=mission.score,available=mission.availableHours??availableMissionHours(mission.params||normalizeParams()),margin=available-mission.duration;
   const selectedLabel=mission.mode==='distance'?'Misión más directa':mission.mode==='risk'?'Misión de menor exposición':'Misión equilibrada';
@@ -1308,7 +1355,7 @@ function renderMission(mission){
   $('avgSlope').textContent=Number.isFinite(m.avgSlopeDeg)?`${m.avgSlopeDeg.toFixed(1)}°`:'—';$('segments').textContent=m.segments;$('legsCount').textContent=mission.legs.length;$('dwellTotal').textContent=`${Number.isFinite(mission.dwellMinutes)?mission.dwellMinutes:0} min`;$('missionMargin').textContent=formatSignedMargin(margin);
   if($('avgTransitability'))$('avgTransitability').textContent=Number.isFinite(m.avgTransitability)?`${m.avgTransitability.toFixed(0)}/100`:'—';if($('minTransitabilityMetric'))$('minTransitabilityMetric').textContent=Number.isFinite(m.minTransitability)?`${m.minTransitability.toFixed(0)}/100`:'—';if($('avgConfidence'))$('avgConfidence').textContent=Number.isFinite(m.avgConfidence)?`${m.avgConfidence.toFixed(0)}%`:'—';if($('minConfidenceMetric'))$('minConfidenceMetric').textContent=Number.isFinite(m.minConfidence)?`${m.minConfidence.toFixed(0)}%`:'—';if($('avgRoughnessDisplay'))$('avgRoughnessDisplay').textContent=Number.isFinite(m.avgRoughnessDeg)?`${m.avgRoughnessDeg.toFixed(1)}°`:'—';
   $('calcParams').textContent=`${mission.params.speed.toFixed(1)} km/h · EVA ${mission.params.evaTime.toFixed(1)} h · margen ${mission.params.returnMargin}% · pendiente ≤${mission.params.maxSlopeLimit.toFixed(0)}° · transit. ≥${mission.params.minTransitability.toFixed(0)} · confianza ≥${mission.params.minConfidence.toFixed(0)}%`;
-  renderMissionTimeline(mission);updateRouteSequenceStrip(mission);renderTerrainProfile(mission);renderMissionAnalytics(mission);updateMissionHud(mission);updateHeaderStatus();drawPointMarkers();
+  renderMissionTimeline(mission);updateRouteSequenceStrip(mission);renderTerrainProfile(mission);renderMissionAnalytics(mission);updateMissionHud(mission);updateHeaderStatus();updateStrategyCards(currentMission);drawPointMarkers();
   $('recalculate').disabled=false;$('saveMission').disabled=false;if($('lastCalculated'))$('lastCalculated').textContent=lastCalculatedAt?`Último cálculo: ${lastCalculatedAt.toLocaleString('es-NI',{dateStyle:'short',timeStyle:'short'})}`:'Último cálculo: —';
 }
 
@@ -1368,7 +1415,7 @@ function resetMetrics(){
   if($('lastCalculated'))$('lastCalculated').textContent=ui('Último cálculo: —','Last calculation: —');
   if($('recalculate'))$('recalculate').disabled=true;
   if($('saveMission'))$('saveMission').disabled=true;
-  renderTerrainProfile(null); renderMissionAnalytics(null); renderMissionTimeline(null); updateRouteSequenceStrip(null); updateMissionHud(null); updateHeaderStatus();
+  renderTerrainProfile(null); renderMissionAnalytics(null); renderMissionTimeline(null); updateRouteSequenceStrip(null); updateMissionHud(null); updateHeaderStatus(); updateStrategyCards(null);
 }
 function clearMission(){missionPoints=[];currentMission=null;selecting=false;routeLayer.getSource().clear();drawPointMarkers();renderMissionList();resetMetrics();updatePlanningUI();}
 function setBusy(b,msg){busy=b;$('calculate').disabled=b||missionPoints.length<2;$('recalculate').disabled=b||!currentMission;$('saveMission').disabled=b||!currentMission;if(msg)$('statusText').textContent=msg;else $('statusText').textContent='DATOS CARTOGRÁFICOS · NASA / USGS';}
@@ -1749,7 +1796,7 @@ function applyLayerVisibility(layer,visible){
 }
 document.querySelectorAll('[data-layer],[data-quick-layer]').forEach(el=>el.addEventListener('change',()=>applyLayerVisibility(el.dataset.layer||el.dataset.quickLayer,el.checked)));
 
-document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{if(currentMission){const mode=el.value;renderMission(currentMission[mode]);drawMissionRoutes(currentMission,mode);}});
+document.querySelectorAll('input[name="mode"]').forEach(el=>el.onchange=()=>{updateStrategyCards(currentMission);if(currentMission){const mode=el.value;renderMission(currentMission[mode]);drawMissionRoutes(currentMission,mode);if(strategiesEquivalent(currentMission))showToast(ui('Las tres estrategias son prácticamente equivalentes en este terreno y con estos límites.','The three strategies are practically equivalent on this terrain with these limits.'));}});
 $('returnBase').onchange=()=>{currentMission=null;routeLayer?.getSource()?.clear();resetMetrics();updatePlanningUI();};
 $('optimizeOrder')?.addEventListener('change',()=>{currentMission=null;routeLayer?.getSource()?.clear();resetMetrics();updatePlanningUI();showToast($('optimizeOrder').checked?ui('Orden automático activado. JEZERO elegirá la mejor secuencia al calcular.','Automatic ordering enabled. JEZERO will choose the best sequence when calculating.'):ui('Orden manual activado. JEZERO respetará la lista de puntos.','Manual ordering enabled. JEZERO will respect the point list.'));});
 ['speed','evaTime','returnMargin','maxSlopeLimit','minTransitability','minConfidence'].forEach(id=>$(id).addEventListener('input',()=>{if(currentMission){$('recalculate').disabled=false;$('statusText').textContent='CAMBIOS PENDIENTES · pulsa recalcular';}}));
@@ -1795,7 +1842,7 @@ function updatePanelControls(){
   const l=$('toggleLeftPanel'), r=$('toggleRightPanel'), focus=$('focusMap');
   if(l){l.textContent=state.left?'‹':'›';l.title=state.left?ui('Ocultar panel izquierdo','Hide left panel'):ui('Mostrar panel izquierdo','Show left panel');l.setAttribute('aria-label',l.title);}
   if(r){r.textContent=state.right?'›':'‹';r.title=state.right?ui('Ocultar panel derecho','Hide right panel'):ui('Mostrar panel derecho','Show right panel');r.setAttribute('aria-label',r.title);}
-  if(focus){focus.classList.toggle('is-active',!state.left&&!state.right);focus.textContent=!state.left&&!state.right?'▣ Paneles':'⤢ Mapa';}
+  if(focus){focus.classList.toggle('is-active',!state.left&&!state.right);const label=focus.querySelector('span');if(label)label.textContent=!state.left&&!state.right?ui('Paneles','Panels'):ui('Mapa','Map');focus.title=!state.left&&!state.right?ui('Mostrar paneles','Show panels'):ui('Ocultar ambos paneles','Hide both panels');}
 }
 function setPanelState(left,right,{persist=true}={}){
   document.body.classList.toggle('left-panel-hidden',!left);

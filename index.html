@@ -9,8 +9,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png?v=8">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=8">
   <link rel="shortcut icon" href="assets/favicon.ico?v=8">
-  <link rel="stylesheet" href="style.css?v=41">
-  <script src="modules/theme.js?v=41"></script>
+  <link rel="stylesheet" href="style.css?v=42">
+  <script src="modules/theme.js?v=42"></script>
 </head>
 <body data-module="planner">
 <header class="topbar">
@@ -141,9 +141,23 @@
 
       <section class="legendBox">
         <div class="sectionTitle">ESTRATEGIA DE RUTA</div>
-        <label class="modeOption"><input type="radio" name="mode" value="balanced" checked><span><b>Equilibrada</b><small>Distancia + terreno</small></span></label>
-        <label class="modeOption"><input type="radio" name="mode" value="risk"><span><b>Menor exposición</b><small>Penaliza pendientes</small></span></label>
-        <label class="modeOption"><input type="radio" name="mode" value="distance"><span><b>Más directa</b><small>Minimiza distancia</small></span></label>
+        <div class="strategyCards" id="strategyCards">
+          <label class="modeOption strategyCard" data-strategy-card="balanced">
+            <input type="radio" name="mode" value="balanced" checked>
+            <span class="strategyIcon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M7 36c8-14 11-24 18-24 7 0 6 12 16 12"/><path d="M34 18l7 6-8 5"/></svg></span>
+            <span class="strategyCopy"><b>Equilibrada</b><small>Distancia + terreno + confianza</small><em data-strategy-summary="balanced">Calcula para comparar</em></span>
+          </label>
+          <label class="modeOption strategyCard" data-strategy-card="risk">
+            <input type="radio" name="mode" value="risk">
+            <span class="strategyIcon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 34c9 0 11-5 13-11 3-9 9-12 22-10"/><path d="M35 8l7 5-7 6"/><path class="riskZone" d="M18 35l6-10 6 10z"/></svg></span>
+            <span class="strategyCopy"><b>Menor exposición</b><small>Evita pendiente, rugosidad e incertidumbre</small><em data-strategy-summary="risk">Calcula para comparar</em></span>
+          </label>
+          <label class="modeOption strategyCard" data-strategy-card="distance">
+            <input type="radio" name="mode" value="distance">
+            <span class="strategyIcon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M7 36L38 12"/><path d="M30 11h9v9"/></svg></span>
+            <span class="strategyCopy"><b>Más directa</b><small>Minimiza distancia; el terreno solo bloquea límites duros</small><em data-strategy-summary="distance">Calcula para comparar</em></span>
+          </label>
+        </div>
       </section>
 
       <section class="missionTimelinePanel">
@@ -281,12 +295,16 @@
         <small>−90° a 90° · −180° a 180° · mapa persistente entre módulos</small>
       </div>
       <div class="mapToolsRight">
-        <div class="mapActions">
-          <button id="zoomIn" title="Acercar">＋</button>
-          <button id="zoomOut" title="Alejar">−</button>
-          <button id="center">⌖ Centro</button>
-          <button id="toggleLayerDrawer" class="mapToolWide" type="button" aria-expanded="false" aria-controls="mapLayerDrawer">▦ Capas / leyenda</button>
-          <button id="focusMap" class="mapToolWide" type="button" title="Ocultar o mostrar ambos paneles">⤢ Mapa</button>
+        <div class="mapActions mapCommandBar">
+          <div class="toolCluster zoomCluster" role="group" aria-label="Zoom del mapa">
+            <button id="zoomIn" class="toolButton iconOnly" title="Acercar" aria-label="Acercar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button id="zoomOut" class="toolButton iconOnly" title="Alejar" aria-label="Alejar"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+          </div>
+          <div class="toolCluster primaryTools" role="group" aria-label="Herramientas del mapa">
+            <button id="center" class="toolButton" title="Centrar Marte"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Centro</span></button>
+            <button id="toggleLayerDrawer" class="toolButton mapToolWide" type="button" aria-expanded="false" aria-controls="mapLayerDrawer"><svg viewBox="0 0 24 24"><path d="M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4"/></svg><span>Capas</span></button>
+            <button id="focusMap" class="toolButton mapToolWide" type="button" title="Ocultar o mostrar ambos paneles"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span>Mapa</span></button>
+          </div>
         </div>
         <div class="mapLayerDrawer" id="mapLayerDrawer" aria-hidden="true">
           <div class="mapLayerDrawerHeader"><div><b>VISTA DEL MAPA</b><small>Representación visual; no modifica los cálculos</small></div><button id="closeLayerDrawer" type="button">×</button></div>
@@ -346,7 +364,7 @@
 
     <section class="analyticsWorkspace" id="analyticsWorkspace" aria-label="Centro de análisis de la misión">
       <header class="analyticsHeader">
-        <div><span>JEZERO / MISSION ANALYTICS V41</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
+        <div><span>JEZERO / MISSION ANALYTICS V42</span><h2>ANÁLISIS INTERACTIVO DE MISIÓN</h2><p>Todos los gráficos están concentrados aquí y sincronizados con la ruta: terreno, movilidad, retorno y comparación de estrategias.</p></div>
         <div class="analyticsHeaderMeta"><b id="analyticsRouteName">SIN MISIÓN</b><span id="analyticsGeneratedAt">CALCULA UNA RUTA</span></div>
       </header>
       <div class="analyticsToolbar">
@@ -488,8 +506,8 @@
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://js.arcgis.com/4.34/"></script>
 <script src="mars-elevation.js"></script>
-<script src="modules/i18n.js?v=41"></script>
-<script src="script.js?v=41"></script>
-<script src="modules/module-shell.js?v=41"></script>
+<script src="modules/i18n.js?v=42"></script>
+<script src="script.js?v=42"></script>
+<script src="modules/module-shell.js?v=42"></script>
 </body>
 </html>
